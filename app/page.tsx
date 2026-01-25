@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { tInk, tRarity } from "@/lib/lorcana-fr";
 
 type Card = {
   id: string;
@@ -199,15 +200,32 @@ export default function Home() {
           return (
             <article key={c.id} className="card">
               <div className="cardMedia">
-                {c.imageUrl ? (
-                  <img src={c.imageUrl} alt={c.name} loading="lazy" />
-                ) : (
-                  <img
-                    src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E"
-                    alt="Image indisponible"
-                    loading="lazy"
-                  />
-                )}
+                <img
+  src={
+    c.imageUrl ||
+    "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E"
+  }
+  alt={c.name}
+  loading="lazy"
+  onError={(e) => {
+    const img = e.currentTarget;
+
+    // Évite boucle infinie
+    if (img.dataset.fallback === "1") {
+      img.src =
+        "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E";
+      return;
+    }
+
+    // Retry 1 fois (cache-bust)
+    img.dataset.fallback = "1";
+    const original = img.src;
+    img.src = original.includes("?")
+      ? original + "&retry=1"
+      : original + "?retry=1";
+  }}
+/>
+
 
                 <div className="qtyPill">
                   <button onClick={() => setQty(c.id, qty - 1)} aria-label="Diminuer">−</button>
@@ -221,7 +239,7 @@ export default function Home() {
                   <div className="ovTitle">{c.name}</div>
                   <div className="ovMeta">
                     {c.setName}{c.setCode ? ` • Chapitre ${c.setCode}` : ""}<br />
-                    {c.ink ?? "—"} • {c.rarity ?? "—"} • Coût {c.cost ?? "—"}
+                    {tInk(c.ink)} • {tRarity(c.rarity)} • Coût {c.cost ?? "—"}
                   </div>
                 </div>
               </div>
