@@ -12,9 +12,6 @@
     "prisma:seed": "prisma db seed",
     "sync:cards": "ts-node scripts/syncCards.ts"
   },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
-  },
   "dependencies": {
     "@prisma/client": "^6.19.2",
     "next": "14.2.5",
