@@ -24,6 +24,8 @@ function cx(...parts: Array<string | false | undefined | null>) {
 export default function Home() {
   const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
   const [cards, setCards] = useState<Card[]>([]);
+  const [loadingCards, setLoadingCards] = useState(true);
+  const [cardsError, setCardsError] = useState<string | null>(null);
   const [col, setCol] = useState<Record<string, number>>({});
 
   const [q, setQ] = useState("");
@@ -38,8 +40,31 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/cards").then((r) => r.json()).then(setCards);
-  }, []);
+  let cancelled = false;
+
+  async function loadCards() {
+    try {
+      setLoadingCards(true);
+      setCardsError(null);
+
+      const r = await fetch("/api/cards", { cache: "no-store" });
+      if (!r.ok) throw new Error(`API /api/cards: ${r.status}`);
+
+      const data = await r.json();
+      if (!cancelled) setCards(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      if (!cancelled) setCardsError(String(e?.message || e));
+    } finally {
+      if (!cancelled) setLoadingCards(false);
+    }
+  }
+
+  loadCards();
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
 
   useEffect(() => {
     fetch(`/api/collection?userId=${userId}`)
@@ -52,14 +77,32 @@ export default function Home() {
   }, [userId]);
 
   async function setQty(cardId: string, quantity: number) {
-    const next = Math.max(0, quantity);
-    setCol((prev) => ({ ...prev, [cardId]: next }));
-    await fetch("/api/collection/setQty", {
+  const next = Math.max(0, quantity);
+
+  // On garde une copie pour rollback si l'API plante
+  const prev = col[cardId] || 0;
+
+  // Optimiste
+  setCol((p) => ({ ...p, [cardId]: next }));
+
+  try {
+    const res = await fetch("/api/collection/setQty", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, cardId, quantity: next }),
     });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`${res.status} ${text}`);
+    }
+  } catch (e) {
+    // Rollback + message clair
+    setCol((p) => ({ ...p, [cardId]: prev }));
+    alert("❌ Sauvegarde impossible. Regarde les logs Vercel (Function setQty).");
   }
+}
+
 
   function toggleInk(ink: string) {
     setInks((prev) => {
@@ -110,7 +153,14 @@ export default function Home() {
           <div className="sigil">📜</div>
           <div>
             <h1>Grimoire Lorcana</h1>
-            <p>{filtered.length} cartes affichées</p>
+            <p>
+              {loadingCards
+                ? "⏳ Chargement des cartes…"
+                : cardsError
+                ? "❌ Erreur de chargement"
+                : `${filtered.length} cartes affichées`}
+            </p>
+
           </div>
         </div>
 
@@ -148,6 +198,13 @@ export default function Home() {
 
         </div>
       </header>
+      
+      {cardsError && (
+  <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
+    <p>❌ Impossible de charger les cartes: {cardsError}</p>
+    <button className="btn" onClick={() => location.reload()}>Réessayer</button>
+  </div>
+)}
 
       {/* Filtres premium */}
       <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
