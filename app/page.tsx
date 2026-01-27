@@ -193,6 +193,7 @@ export default function Home() {
             <option value="angele">Angèle</option>
           </select>
 
+          <a className="link" href="/stats">📊 Stats</a>
           <a className="link" href="/gift">🎁 Doubles</a>
           <a className="link" href="/chapitres">📚 Chapitres</a>
 
