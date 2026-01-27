@@ -196,6 +196,8 @@ export default function Home() {
           <a className="link" href="/stats">📊 Stats</a>
           <a className="link" href="/gift">🎁 Doubles</a>
           <a className="link" href="/chapitres">📚 Chapitres</a>
+          <a className="link" href="/echange">🤝 Échange</a>
+
 
         </div>
       </header>
