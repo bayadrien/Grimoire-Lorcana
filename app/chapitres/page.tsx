@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { tInk, tRarity } from "@/lib/lorcana-fr";
 
 type Card = {
   id: string;
@@ -94,6 +95,7 @@ export default function ChapitresPage() {
           </select>
 
           <a className="link" href="/">🎴 Catalogue</a>
+          <a className="link" href="/stats">📊 Stats</a>
           <a className="link" href="/gift">🎁 Doubles</a>
         </div>
       </header>
