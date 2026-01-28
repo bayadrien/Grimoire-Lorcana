@@ -421,3 +421,44 @@ input.pill{
 .corner, .qtyPill {
   z-index: 4;
 }
+
+/* ✨ Polish: lignes historiques */
+.tradeRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+}
+.tradeLeft{ display:flex; align-items:center; gap: 12px; min-width: 0; }
+.tradeImg{
+  width: 56px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.15);
+}
+.tradeTitle{ font-weight: 900; }
+.tradeMeta{ opacity:.82; font-size: 13px; margin-top: 4px; }
+.tradeRight{ text-align:right; opacity:.9; }
+.tradeArrow{ font-weight: 800; }
+.tradeDate{ font-size: 12px; opacity: .75; margin-top: 4px; }
+
+/* ✨ Polish: hover doux sur les cartes */
+.cardMedia img{
+  transition: transform .15s ease, filter .15s ease;
+}
+.card:hover .cardMedia img{
+  transform: translateY(-1px) scale(1.01);
+  filter: saturate(1.05);
+}
+
+/* ✨ Boutons un poil plus premium */
+.btn{
+  border-radius: 999px !important;
+}
+

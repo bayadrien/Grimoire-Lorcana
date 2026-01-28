@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { tInk, tRarity } from "@/lib/lorcana-fr";
 
 type Trade = {
   id: string;
@@ -8,13 +9,24 @@ type Trade = {
   toUser: string;
   quantity: number;
   createdAt: string;
-  card: { name: string; setCode?: string | null; setName?: string | null };
+  card: {
+    name: string;
+    setName: string | null;
+    setCode: string | null;
+    ink?: string | null;
+    rarity?: string | null;
+    imageUrl?: string | null;
+  };
 };
+
+const PLACEHOLDER =
+  "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E";
 
 export default function HistoriqueEchange() {
   const [rows, setRows] = useState<Trade[]>([]);
   const [from, setFrom] = useState("all");
   const [to, setTo] = useState("all");
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     const p = new URLSearchParams({ from, to });
@@ -23,6 +35,12 @@ export default function HistoriqueEchange() {
       .then(setRows);
   }, [from, to]);
 
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return rows;
+    return rows.filter((t) => t.card?.name?.toLowerCase().includes(s));
+  }, [rows, q]);
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -30,18 +48,21 @@ export default function HistoriqueEchange() {
           <div className="sigil">🧾</div>
           <div>
             <h1>Historique des échanges</h1>
-            <p>{rows.length} lignes</p>
+            <p>{filtered.length} lignes</p>
           </div>
         </div>
 
         <div className="controls">
           <a className="link" href="/echange">⬅️ Échange</a>
           <a className="link" href="/">🎴 Cartes</a>
+          <a className="link" href="/chapitres">📚 Chapitres</a>
         </div>
       </header>
 
       <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
         <div className="controls" style={{ gap: 10 }}>
+          <input className="pill" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 Rechercher…" />
+
           <select value={from} onChange={(e) => setFrom(e.target.value)}>
             <option value="all">De: tous</option>
             <option value="adrien">De: Adrien</option>
@@ -54,20 +75,32 @@ export default function HistoriqueEchange() {
             <option value="angele">Vers: Angèle</option>
           </select>
         </div>
+
+        <div style={{ opacity: 0.85 }}>
+          {rows.length === 0 ? "Encore vide… fais un premier don 🤝" : "📌 Journal à jour"}
+        </div>
       </div>
 
-      <section style={{ marginTop: 12 }}>
-        {rows.map((t) => (
-          <div key={t.id} className="topbar" style={{ marginTop: 10, justifyContent: "space-between" }}>
-            <div>
-              <b>{t.card.name}</b>
-              <div style={{ opacity: 0.8, marginTop: 4 }}>
-                {t.card.setName}{t.card.setCode ? ` • Chapitre ${t.card.setCode}` : ""} • Qty: {t.quantity}
+      <section style={{ marginTop: 12, display: "grid", gap: 10 }}>
+        {filtered.map((t) => (
+          <div key={t.id} className="tradeRow">
+            <div className="tradeLeft">
+              <img className="tradeImg" src={t.card.imageUrl || PLACEHOLDER} alt={t.card.name} loading="lazy" />
+              <div>
+                <div className="tradeTitle">{t.card.name}</div>
+                <div className="tradeMeta">
+                  {t.card.setName}
+                  {t.card.setCode ? ` • Chapitre ${t.card.setCode}` : ""} • {tInk(t.card.ink)} •{" "}
+                  {tRarity(t.card.rarity)} • Qty: <b>{t.quantity}</b>
+                </div>
               </div>
             </div>
-            <div style={{ opacity: 0.85 }}>
-              {t.fromUser} → {t.toUser}<br />
-              <span style={{ fontSize: 12, opacity: 0.75 }}>{new Date(t.createdAt).toLocaleString("fr-FR")}</span>
+
+            <div className="tradeRight">
+              <div className="tradeArrow">
+                <b>{t.fromUser}</b> → <b>{t.toUser}</b>
+              </div>
+              <div className="tradeDate">{new Date(t.createdAt).toLocaleString("fr-FR")}</div>
             </div>
           </div>
         ))}
