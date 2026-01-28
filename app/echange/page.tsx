@@ -65,16 +65,22 @@ export default function EchangePage() {
   }
 
   async function markGiven(fromUser: "adrien" | "angele", toUser: "adrien" | "angele", cardId: string, quantity = 1) {
-  const res = await fetch("/api/trades/add", {
+  const res = await fetch("/api/trades/give", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fromUser, toUser, cardId, quantity }),
   });
 
   if (!res.ok) {
-    alert("❌ Impossible d'enregistrer l'échange (API).");
+    const j = await res.json().catch(() => null);
+    alert(`❌ Transfert impossible: ${j?.error || res.status}`);
     return;
   }
+
+  // recharge la page échange pour recalculer les listes
+  await load();
+}
+
 
   // petit feedback
   alert("✅ Noté dans l’historique !");
