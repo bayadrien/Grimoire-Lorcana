@@ -64,6 +64,22 @@ export default function EchangePage() {
     }
   }
 
+  async function markGiven(fromUser: "adrien" | "angele", toUser: "adrien" | "angele", cardId: string, quantity = 1) {
+  const res = await fetch("/api/trades/add", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fromUser, toUser, cardId, quantity }),
+  });
+
+  if (!res.ok) {
+    alert("❌ Impossible d'enregistrer l'échange (API).");
+    return;
+  }
+
+  // petit feedback
+  alert("✅ Noté dans l’historique !");
+}
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -95,6 +111,8 @@ export default function EchangePage() {
           <a className="link" href="/chapitres">📚 Chapitres</a>
           <a className="link" href="/stats">📊 Stats</a>
           <a className="link" href="/gift">🎁 Doubles</a>
+          <a className="link" href="/echange/historique">🧾 Historique</a>
+
         </div>
       </header>
 

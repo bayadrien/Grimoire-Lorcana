@@ -43,3 +43,18 @@ model Collection {
 
   @@id([userId, cardId])
 }
+
+model Trade {
+  id        String   @id @default(cuid())
+  fromUser  String
+  toUser    String
+  cardId    String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  card Card @relation(fields: [cardId], references: [id])
+
+  @@index([fromUser, toUser])
+  @@index([cardId])
+  @@index([createdAt])
+}
