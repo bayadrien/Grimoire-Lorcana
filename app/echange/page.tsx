@@ -33,14 +33,13 @@ const PLACEHOLDER =
 
 export default function EchangePage() {
   const [q, setQ] = useState("");
-  const [chapter, setChapter] = useState<"all" | string>("all");
-  const [ink, setInk] = useState<"all" | string>("all");
+  const [chapter, setChapter] = useState<string>("all");
+  const [ink, setInk] = useState<string>("all");
 
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // anti double clic / anti spam
   const [busy, setBusy] = useState<string | null>(null);
 
   async function load() {
@@ -52,8 +51,8 @@ export default function EchangePage() {
       params.set("chapter", chapter);
       params.set("ink", ink);
 
-      const r = await fetch(`/api/echange?${params.toString()}`, { cache: "no-store" });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const r = await fetch("/api/echange?" + params.toString(), { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
 
       const j = (await r.json()) as Payload;
       setData(j);
@@ -75,13 +74,8 @@ export default function EchangePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, chapter, ink]);
 
-  async function markGiven(
-    fromUser: "adrien" | "angele",
-    toUser: "adrien" | "angele",
-    cardId: string,
-    quantity = 1
-  ) {
-    const key = `${fromUser}->${toUser}:${cardId}`;
+  async function markGiven(fromUser: "adrien" | "angele", toUser: "adrien" | "angele", cardId: string, quantity = 1) {
+    const key = fromUser + "->" + toUser + ":" + cardId;
     if (busy) return;
 
     setBusy(key);
@@ -95,7 +89,7 @@ export default function EchangePage() {
       const j = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(`❌ Transfert impossible : ${j?.error || res.status}`);
+        alert("❌ Transfert impossible : " + (j?.error || res.status));
         return;
       }
 
@@ -134,10 +128,10 @@ export default function EchangePage() {
             className="pill"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="🔎 Rechercher une carte…"
+            placeholder="🔎 Rechercher une carte..."
           />
 
-          <select value={chapter} onChange={(e) => setChapter(e.target.value as any)}>
+          <select value={chapter} onChange={(e) => setChapter(e.target.value)}>
             <option value="all">Tous les chapitres</option>
             {(data?.filters.chapters ?? []).map((ch) => (
               <option key={ch} value={ch}>
@@ -146,7 +140,7 @@ export default function EchangePage() {
             ))}
           </select>
 
-          <select value={ink} onChange={(e) => setInk(e.target.value as any)}>
+          <select value={ink} onChange={(e) => setInk(e.target.value)}>
             <option value="all">Toutes les encres</option>
             {(data?.filters.inks ?? []).map((x) => (
               <option key={x} value={x}>
@@ -178,13 +172,13 @@ export default function EchangePage() {
         </div>
       )}
 
-      <section className="panel" style={{ marginTop: 12 }}>
+      <section style={{ marginTop: 12, padding: 14, borderRadius: 16, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)" }}>
         <h2 style={{ margin: 0 }}>Adrien → Angèle</h2>
         <p style={{ marginTop: 6, opacity: 0.85 }}>
-          Cartes où Adrien a des copies “en trop” (au-delà de 1) et Angèle en a 0.
+          Cartes où Adrien a des copies en trop (au-delà de 1) et Angèle en a 0.
         </p>
 
-        <div className="grid">
+        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
           {!loading && a2g.length === 0 && <div style={{ opacity: 0.8 }}>Rien à échanger ici 🎈</div>}
 
           {a2g.map((r) => (
@@ -198,7 +192,7 @@ export default function EchangePage() {
                   <div className="ovTitle">{r.card.name}</div>
                   <div className="ovMeta">
                     {r.card.setName}
-                    {r.card.setCode ? ` • Chapitre ${r.card.setCode}` : ""}
+                    {r.card.setCode ? " • Chapitre " + r.card.setCode : ""}
                     <br />
                     {tInk(r.card.ink)} • {tRarity(r.card.rarity)} • Coût {r.card.cost ?? "—"}
                     <br />
@@ -208,13 +202,13 @@ export default function EchangePage() {
                   <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
                     <button
                       className="btn"
-                      disabled={busy === `adrien->angele:${r.card.id}`}
+                      disabled={busy === "adrien->angele:" + r.card.id}
                       onClick={(e) => {
                         e.preventDefault();
                         markGiven("adrien", "angele", r.card.id, 1);
                       }}
                     >
-                      {busy === `adrien->angele:${r.card.id}` ? "⏳…" : "✅ Donné"}
+                      {busy === "adrien->angele:" + r.card.id ? "⏳..." : "✅ Donné"}
                     </button>
                   </div>
                 </div>
@@ -224,13 +218,13 @@ export default function EchangePage() {
         </div>
       </section>
 
-      <section className="panel" style={{ marginTop: 12 }}>
+      <section style={{ marginTop: 12, padding: 14, borderRadius: 16, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)" }}>
         <h2 style={{ margin: 0 }}>Angèle → Adrien</h2>
         <p style={{ marginTop: 6, opacity: 0.85 }}>
-          Cartes où Angèle a des copies “en trop” (au-delà de 1) et Adrien en a 0.
+          Cartes où Angèle a des copies en trop (au-delà de 1) et Adrien en a 0.
         </p>
 
-        <div className="grid">
+        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
           {!loading && g2a.length === 0 && <div style={{ opacity: 0.8 }}>Rien à échanger ici 🎈</div>}
 
           {g2a.map((r) => (
@@ -244,7 +238,7 @@ export default function EchangePage() {
                   <div className="ovTitle">{r.card.name}</div>
                   <div className="ovMeta">
                     {r.card.setName}
-                    {r.card.setCode ? ` • Chapitre ${r.card.setCode}` : ""}
+                    {r.card.setCode ? " • Chapitre " + r.card.setCode : ""}
                     <br />
                     {tInk(r.card.ink)} • {tRarity(r.card.rarity)} • Coût {r.card.cost ?? "—"}
                     <br />
@@ -254,13 +248,13 @@ export default function EchangePage() {
                   <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
                     <button
                       className="btn"
-                      disabled={busy === `angele->adrien:${r.card.id}`}
+                      disabled={busy === "angele->adrien:" + r.card.id}
                       onClick={(e) => {
                         e.preventDefault();
                         markGiven("angele", "adrien", r.card.id, 1);
                       }}
                     >
-                      {busy === `angele->adrien:${r.card.id}` ? "⏳…" : "✅ Donné"}
+                      {busy === "angele->adrien:" + r.card.id ? "⏳..." : "✅ Donné"}
                     </button>
                   </div>
                 </div>
@@ -269,21 +263,6 @@ export default function EchangePage() {
           ))}
         </div>
       </section>
-
-      <style jsx>{`
-        .panel {
-          padding: 14px;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .grid {
-          margin-top: 12px;
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-          gap: 12px;
-        }
-      `}</style>
     </main>
   );
 }
