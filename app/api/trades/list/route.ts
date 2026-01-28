@@ -14,7 +14,9 @@ export async function GET(req: Request) {
     where,
     orderBy: { createdAt: "desc" },
     take: 500,
-    include: { card: true },
+    include: {
+      card: { select: { name: true, setName: true, setCode: true } },
+    },
   });
 
   return NextResponse.json(trades);

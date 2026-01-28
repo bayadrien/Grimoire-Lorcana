@@ -1,6 +1,7 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
-import { tInk, tRarity } from "@/lib/lorcana-fr";
+import { tInk } from "@/lib/lorcana-fr";
 
 type Card = {
   id: string;
@@ -8,67 +9,101 @@ type Card = {
   setName: string;
   setCode?: string | null; // "1".."10"
   ink?: string | null;
-  rarity?: string | null;
-  cost?: number | null;
   imageUrl?: string | null;
 };
 
 type ColRow = { cardId: string; quantity: number };
 
-export default function ChapitresPage() {
-  const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
+function pct(a: number, b: number) {
+  if (!b) return 0;
+  return Math.round((a / b) * 100);
+}
+
+export default function ChapitresAlbum() {
   const [cards, setCards] = useState<Card[]>([]);
-  const [col, setCol] = useState<Record<string, number>>({});
+  const [aCol, setACol] = useState<Record<string, number>>({});
+  const [gCol, setGCol] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    const u = (localStorage.getItem("activeUser") as any) || "adrien";
-    setUserId(u);
+    let cancel = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setErr(null);
+
+        const [cardsR, aR, gR] = await Promise.all([
+          fetch("/api/cards", { cache: "no-store" }),
+          fetch("/api/collection?userId=adrien", { cache: "no-store" }),
+          fetch("/api/collection?userId=angele", { cache: "no-store" }),
+        ]);
+
+        if (!cardsR.ok) throw new Error(`Cards HTTP ${cardsR.status}`);
+        if (!aR.ok) throw new Error(`Adrien HTTP ${aR.status}`);
+        if (!gR.ok) throw new Error(`Angèle HTTP ${gR.status}`);
+
+        const cardsJ = await cardsR.json();
+        const aJ: ColRow[] = await aR.json();
+        const gJ: ColRow[] = await gR.json();
+
+        const aMap: Record<string, number> = {};
+        const gMap: Record<string, number> = {};
+        aJ.forEach((x) => (aMap[x.cardId] = x.quantity));
+        gJ.forEach((x) => (gMap[x.cardId] = x.quantity));
+
+        if (!cancel) {
+          setCards(Array.isArray(cardsJ) ? cardsJ : Array.isArray(cardsJ?.cards) ? cardsJ.cards : []);
+          setACol(aMap);
+          setGCol(gMap);
+        }
+      } catch (e: any) {
+        if (!cancel) setErr(String(e?.message || e));
+      } finally {
+        if (!cancel) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancel = true;
+    };
   }, []);
-
-  useEffect(() => {
-    fetch("/api/cards").then((r) => r.json()).then(setCards);
-  }, []);
-
-  useEffect(() => {
-    fetch(`/api/collection?userId=${userId}`)
-      .then((r) => r.json())
-      .then((rows: ColRow[]) => {
-        const map: Record<string, number> = {};
-        rows.forEach((x) => (map[x.cardId] = x.quantity));
-        setCol(map);
-      });
-  }, [userId]);
-
-  async function setQty(cardId: string, quantity: number) {
-    const next = Math.max(0, quantity);
-    setCol((prev) => ({ ...prev, [cardId]: next }));
-    await fetch("/api/collection/setQty", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, cardId, quantity: next }),
-    });
-  }
 
   const chapters = useMemo(() => {
-    const s = new Set<string>();
-    for (const c of cards) {
-      const code = c.setCode ? String(c.setCode) : "";
-      if (/^\d+$/.test(code) && Number(code) >= 1 && Number(code) <= 10) s.add(code);
-    }
-    return Array.from(s).sort((a, b) => Number(a) - Number(b));
-  }, [cards]);
+    const map = new Map<string, { code: string; setName: string; total: number; aOwned: number; gOwned: number; duoOwned: number }>();
 
-  const byChapter = useMemo(() => {
-    const map: Record<string, Card[]> = {};
-    for (const ch of chapters) map[ch] = [];
     for (const c of cards) {
-      const ch = c.setCode ? String(c.setCode) : "";
-      if (map[ch]) map[ch].push(c);
+      const code = String(c.setCode ?? "");
+      if (!/^\d+$/.test(code)) continue;
+      const n = Number(code);
+      if (n < 1 || n > 10) continue;
+
+      if (!map.has(code)) {
+        map.set(code, {
+          code,
+          setName: c.setName || `Chapitre ${code}`,
+          total: 0,
+          aOwned: 0,
+          gOwned: 0,
+          duoOwned: 0,
+        });
+      }
+
+      const row = map.get(code)!;
+      row.total += 1;
+
+      const aHas = (aCol[c.id] ?? 0) > 0;
+      const gHas = (gCol[c.id] ?? 0) > 0;
+
+      if (aHas) row.aOwned += 1;
+      if (gHas) row.gOwned += 1;
+      if (aHas || gHas) row.duoOwned += 1;
     }
-    // petit tri par nom
-    for (const ch of chapters) map[ch].sort((a, b) => a.name.localeCompare(b.name, "fr"));
-    return map;
-  }, [cards, chapters]);
+
+    return Array.from(map.values()).sort((x, y) => Number(x.code) - Number(y.code));
+  }, [cards, aCol, gCol]);
 
   return (
     <main className="shell">
@@ -76,83 +111,129 @@ export default function ChapitresPage() {
         <div className="brand">
           <div className="sigil">📚</div>
           <div>
-            <h1>Chapitres</h1>
-            <p>Cartes rangées du chapitre 1 au 10</p>
+            <h1>Chapitres (mode album)</h1>
+            <p>{loading ? "⏳ Chargement…" : `${chapters.length} chapitres`}</p>
           </div>
         </div>
 
         <div className="controls">
-          <select
-            value={userId}
-            onChange={(e) => {
-              const v = e.target.value as "adrien" | "angele";
-              setUserId(v);
-              localStorage.setItem("activeUser", v);
-            }}
-          >
-            <option value="adrien">Adrien</option>
-            <option value="angele">Angèle</option>
-          </select>
-
-          <a className="link" href="/">🎴 Catalogue</a>
+          <a className="link" href="/">🎴 Cartes</a>
+          <a className="link" href="/echange">🤝 Échange</a>
           <a className="link" href="/stats">📊 Stats</a>
           <a className="link" href="/gift">🎁 Doubles</a>
         </div>
       </header>
 
-      {chapters.map((ch) => (
-        <section key={ch} style={{ marginTop: 14 }}>
-          <div className="topbar" style={{ justifyContent: "space-between" }}>
-            <div className="brand" style={{ gap: 10 }}>
-              <div className="sigil">#{ch}</div>
+      {err && (
+        <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
+          <p>❌ Erreur: {err}</p>
+          <button className="btn" onClick={() => location.reload()}>Réessayer</button>
+        </div>
+      )}
+
+      <section className="grid" style={{ marginTop: 12 }}>
+        {chapters.map((ch) => (
+          <a key={ch.code} className="albumCard" href={`/chapitres/${ch.code}`}>
+            <div className="albumTop">
               <div>
-                <h1 style={{ fontSize: 16, margin: 0 }}>Chapitre {ch}</h1>
-                <p style={{ margin: "2px 0 0" }}>{byChapter[ch]?.length ?? 0} cartes</p>
+                <div className="albumTitle">Chapitre {ch.code}</div>
+                <div className="albumSub">{ch.setName}</div>
+              </div>
+              <div className="albumPct">{pct(ch.duoOwned, ch.total)}%</div>
+            </div>
+
+            <div className="bars">
+              <div className="barRow">
+                <span>Adrien</span>
+                <div className="bar"><div className="fill" style={{ width: `${pct(ch.aOwned, ch.total)}%` }} /></div>
+                <b>{pct(ch.aOwned, ch.total)}%</b>
+              </div>
+
+              <div className="barRow">
+                <span>Angèle</span>
+                <div className="bar"><div className="fill" style={{ width: `${pct(ch.gOwned, ch.total)}%` }} /></div>
+                <b>{pct(ch.gOwned, ch.total)}%</b>
+              </div>
+
+              <div className="barRow">
+                <span>Cumul</span>
+                <div className="bar"><div className="fill" style={{ width: `${pct(ch.duoOwned, ch.total)}%` }} /></div>
+                <b>{pct(ch.duoOwned, ch.total)}%</b>
               </div>
             </div>
-          </div>
 
-          <div className="grid" style={{ marginTop: 10 }}>
-            {(byChapter[ch] || []).map((c) => {
-              const qty = col[c.id] || 0;
-              const cornerText = qty > 1 ? "🎁 Double" : qty === 1 ? "✅ OK" : "⬜ 0";
-              const cornerClass = qty > 1 ? "double" : qty === 1 ? "ok" : "missing";
+            <div className="albumFooter">
+              <span>Total: <b>{ch.total}</b></span>
+              <span>Manquantes duo: <b>{ch.total - ch.duoOwned}</b></span>
+            </div>
+          </a>
+        ))}
+      </section>
 
-              return (
-                <article key={c.id} className="card">
-                  <div className="cardMedia">
-                    <img
-                      src={
-                        c.imageUrl ||
-                        "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E"
-                      }
-                      alt={c.name}
-                      loading="lazy"
-                    />
+      <style jsx>{`
+        .grid{
+          display:grid;
+          grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+          gap: 12px;
+        }
+        .albumCard{
+          display:block;
+          padding: 14px;
+          border-radius: 18px;
+          background: rgba(255,255,255,.04);
+          border: 1px solid rgba(255,255,255,.10);
+          text-decoration:none;
+          color: inherit;
+          transition: transform .12s ease;
+        }
+        .albumCard:hover{ transform: translateY(-2px); }
 
-                    <div className="qtyPill">
-                      <button onClick={() => setQty(c.id, qty - 1)} aria-label="Retirer 1">−</button>
-                      <div className="num">{qty}</div>
-                      <button onClick={() => setQty(c.id, qty + 1)} aria-label="Ajouter 1">+</button>
-                    </div>
+        .albumTop{
+          display:flex;
+          align-items:flex-start;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .albumTitle{ font-weight: 900; font-size: 18px; }
+        .albumSub{ opacity:.8; margin-top: 4px; }
+        .albumPct{
+          font-weight: 900;
+          font-size: 18px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,.12);
+          background: rgba(0,0,0,.18);
+        }
 
-                    <div className={`corner ${cornerClass}`}>{cornerText}</div>
+        .bars{ margin-top: 12px; display:flex; flex-direction:column; gap: 8px; }
+        .barRow{
+          display:grid;
+          grid-template-columns: 70px 1fr 46px;
+          align-items:center;
+          gap: 10px;
+          font-size: 13px;
+          opacity: .95;
+        }
+        .bar{
+          height: 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,.10);
+          overflow:hidden;
+          border: 1px solid rgba(255,255,255,.08);
+        }
+        .fill{
+          height: 100%;
+          background: rgba(255,255,255,.55);
+        }
 
-                    <div className="overlay">
-                      <div className="ovTitle">{c.name}</div>
-                      <div className="ovMeta">
-                        {c.setName} • Chapitre {ch}
-                        <br />
-                        {c.ink ?? "—"} • {c.rarity ?? "—"} • Coût {c.cost ?? "—"}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+        .albumFooter{
+          margin-top: 12px;
+          display:flex;
+          justify-content: space-between;
+          opacity:.85;
+          font-size: 13px;
+        }
+      `}</style>
     </main>
   );
 }

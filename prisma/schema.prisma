@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -15,7 +15,7 @@ model User {
 }
 
 model Card {
-  id        String       @id
+  id        String   @id
   name      String
   setName   String
   setCode   String?
@@ -27,8 +27,9 @@ model Card {
   willpower Int?
   lore      Int?
   text      String?
+  trades    Trade[]
   imageUrl  String?
-  updatedAt DateTime     @updatedAt
+  updatedAt DateTime @updatedAt
 
   collections Collection[]
 }

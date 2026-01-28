@@ -70,6 +70,8 @@ export default function Gift() {
           </select>
 
           <a className="link" href="/">📚 Catalogue</a>
+          <a className="link" href="/stats">📊 Stats</a>
+
         </div>
       </header>
 
