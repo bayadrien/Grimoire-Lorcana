@@ -397,3 +397,27 @@ input.pill{
 .chip.ink-Ruby.active{ border-color: rgba(190,44,58,.50); }
 .chip.ink-Sapphire.active{ border-color: rgba(43,96,185,.50); }
 .chip.ink-Steel.active{ border-color: rgba(80,90,110,.50); }
+
+/* ✅ Fix clic sur le bouton dans l'overlay */
+.cardMedia { position: relative; }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none; /* l'overlay ne bloque plus les clics */
+}
+
+.overlay button,
+.overlay a,
+.overlay input,
+.overlay select {
+  pointer-events: auto; /* mais les vrais contrôles restent cliquables */
+  position: relative;
+  z-index: 6;
+}
+
+/* au cas où un badge/corner recouvre */
+.corner, .qtyPill {
+  z-index: 4;
+}
