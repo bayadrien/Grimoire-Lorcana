@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
-import { Toast } from "@/app/components/Toast";
+import { Toast } from "@/components/Toast";
 
 type Card = {
   id: string;
