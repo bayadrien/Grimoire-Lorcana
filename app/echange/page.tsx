@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
+import { Toast } from "@/app/components/Toast";
 
 type Card = {
   id: string;
@@ -39,8 +40,20 @@ export default function EchangePage() {
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
+
+  // ✅ 2A: Toggle Grille/Liste + mémorisation
+  const [view, setView] = useState<"grid" | "list">("grid");
+  useEffect(() => {
+    const saved = (localStorage.getItem("echangeView") as "grid" | "list" | null) || "grid";
+    setView(saved);
+  }, []);
+  function setViewAndSave(v: "grid" | "list") {
+    setView(v);
+    localStorage.setItem("echangeView", v);
+  }
 
   async function load() {
     setLoading(true);
@@ -74,7 +87,12 @@ export default function EchangePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, chapter, ink]);
 
-  async function markGiven(fromUser: "adrien" | "angele", toUser: "adrien" | "angele", cardId: string, quantity = 1) {
+  async function markGiven(
+    fromUser: "adrien" | "angele",
+    toUser: "adrien" | "angele",
+    cardId: string,
+    quantity = 1
+  ) {
     const key = fromUser + "->" + toUser + ":" + cardId;
     if (busy) return;
 
@@ -94,6 +112,7 @@ export default function EchangePage() {
       }
 
       await load();
+      setToast(`✅ Don effectué : ${fromUser} → ${toUser}`);
     } finally {
       setBusy(null);
     }
@@ -101,6 +120,48 @@ export default function EchangePage() {
 
   const a2g = useMemo(() => data?.adrienToAngele ?? [], [data]);
   const g2a = useMemo(() => data?.angeleToAdrien ?? [], [data]);
+
+  // ✅ rendu LISTE compacte (IRL)
+  function ListView({
+    rows,
+    fromUser,
+    toUser,
+  }: {
+    rows: Row[];
+    fromUser: "adrien" | "angele";
+    toUser: "adrien" | "angele";
+  }) {
+    if (!loading && rows.length === 0) return <div style={{ opacity: 0.8 }}>Rien à échanger ici 🎈</div>;
+
+    return (
+      <div className="listBox">
+        {rows.map((r) => (
+          <div key={r.card.id} className="listRow">
+            <img className="listImg" src={r.card.imageUrl || PLACEHOLDER} alt={r.card.name} loading="lazy" />
+
+            <div className="listMain">
+              <div className="listTitle">{r.card.name}</div>
+              <div className="listMeta">
+                {r.card.setCode ? "Chapitre " + r.card.setCode : "Chapitre —"} • {tInk(r.card.ink)} •{" "}
+                {tRarity(r.card.rarity)} • À donner: <b>{r.give}</b>
+                <span style={{ marginLeft: 8, opacity: 0.8 }}>
+                  ({fromUser === "adrien" ? "Adrien: " + r.aQty + " • Angèle: " + r.gQty : "Angèle: " + r.gQty + " • Adrien: " + r.aQty})
+                </span>
+              </div>
+            </div>
+
+            <button
+              className="btn"
+              disabled={busy === fromUser + "->" + toUser + ":" + r.card.id}
+              onClick={() => markGiven(fromUser, toUser, r.card.id, 1)}
+            >
+              {busy === fromUser + "->" + toUser + ":" + r.card.id ? "⏳..." : "✅ Donné"}
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <main className="shell">
@@ -123,7 +184,7 @@ export default function EchangePage() {
       </header>
 
       <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
-        <div className="controls" style={{ gap: 10 }}>
+        <div className="controls" style={{ gap: 10, flexWrap: "wrap" }}>
           <input
             className="pill"
             value={q}
@@ -148,6 +209,16 @@ export default function EchangePage() {
               </option>
             ))}
           </select>
+
+          {/* ✅ Toggle view */}
+          <div className="controls" style={{ gap: 6 }}>
+            <button className="btn" onClick={() => setViewAndSave("grid")} style={{ opacity: view === "grid" ? 1 : 0.6 }}>
+              🧱 Grille
+            </button>
+            <button className="btn" onClick={() => setViewAndSave("list")} style={{ opacity: view === "list" ? 1 : 0.6 }}>
+              📋 Liste
+            </button>
+          </div>
         </div>
 
         <div style={{ opacity: 0.85 }}>
@@ -172,97 +243,137 @@ export default function EchangePage() {
         </div>
       )}
 
-      <section style={{ marginTop: 12, padding: 14, borderRadius: 16, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)" }}>
+      {/* Adrien -> Angèle */}
+      <section
+        style={{
+          marginTop: 12,
+          padding: 14,
+          borderRadius: 16,
+          border: "1px solid rgba(255,255,255,.10)",
+          background: "rgba(255,255,255,.04)",
+        }}
+      >
         <h2 style={{ margin: 0 }}>Adrien → Angèle</h2>
         <p style={{ marginTop: 6, opacity: 0.85 }}>
           Cartes où Adrien a des copies en trop (au-delà de 1) et Angèle en a 0.
         </p>
 
-        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
-          {!loading && a2g.length === 0 && <div style={{ opacity: 0.8 }}>Rien à échanger ici 🎈</div>}
+        {view === "list" ? (
+          <ListView rows={a2g} fromUser="adrien" toUser="angele" />
+        ) : (
+          <div
+            style={{
+              marginTop: 12,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {!loading && a2g.length === 0 && <div style={{ opacity: 0.8 }}>Rien à échanger ici 🎈</div>}
 
-          {a2g.map((r) => (
-            <article key={r.card.id} className="card">
-              <div className="cardMedia">
-                <img src={r.card.imageUrl || PLACEHOLDER} alt={r.card.name} loading="lazy" />
+            {a2g.map((r) => (
+              <article key={r.card.id} className="card">
+                <div className="cardMedia">
+                  <img src={r.card.imageUrl || PLACEHOLDER} alt={r.card.name} loading="lazy" />
+                  <div className="corner ok">À donner: {r.give}</div>
 
-                <div className="corner ok">À donner: {r.give}</div>
+                  <div className="overlay">
+                    <div className="ovTitle">{r.card.name}</div>
+                    <div className="ovMeta">
+                      {r.card.setName}
+                      {r.card.setCode ? " • Chapitre " + r.card.setCode : ""}
+                      <br />
+                      {tInk(r.card.ink)} • {tRarity(r.card.rarity)} • Coût {r.card.cost ?? "—"}
+                      <br />
+                      Adrien: {r.aQty} • Angèle: {r.gQty}
+                    </div>
 
-                <div className="overlay">
-                  <div className="ovTitle">{r.card.name}</div>
-                  <div className="ovMeta">
-                    {r.card.setName}
-                    {r.card.setCode ? " • Chapitre " + r.card.setCode : ""}
-                    <br />
-                    {tInk(r.card.ink)} • {tRarity(r.card.rarity)} • Coût {r.card.cost ?? "—"}
-                    <br />
-                    Adrien: {r.aQty} • Angèle: {r.gQty}
-                  </div>
-
-                  <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                    <button
-                      className="btn"
-                      disabled={busy === "adrien->angele:" + r.card.id}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        markGiven("adrien", "angele", r.card.id, 1);
-                      }}
-                    >
-                      {busy === "adrien->angele:" + r.card.id ? "⏳..." : "✅ Donné"}
-                    </button>
+                    <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                      <button
+                        className="btn"
+                        disabled={busy === "adrien->angele:" + r.card.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          markGiven("adrien", "angele", r.card.id, 1);
+                        }}
+                      >
+                        {busy === "adrien->angele:" + r.card.id ? "⏳..." : "✅ Donné"}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
-      <section style={{ marginTop: 12, padding: 14, borderRadius: 16, border: "1px solid rgba(255,255,255,.10)", background: "rgba(255,255,255,.04)" }}>
+      {/* Angèle -> Adrien */}
+      <section
+        style={{
+          marginTop: 12,
+          padding: 14,
+          borderRadius: 16,
+          border: "1px solid rgba(255,255,255,.10)",
+          background: "rgba(255,255,255,.04)",
+        }}
+      >
         <h2 style={{ margin: 0 }}>Angèle → Adrien</h2>
         <p style={{ marginTop: 6, opacity: 0.85 }}>
           Cartes où Angèle a des copies en trop (au-delà de 1) et Adrien en a 0.
         </p>
 
-        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 12 }}>
-          {!loading && g2a.length === 0 && <div style={{ opacity: 0.8 }}>Rien à échanger ici 🎈</div>}
+        {view === "list" ? (
+          <ListView rows={g2a} fromUser="angele" toUser="adrien" />
+        ) : (
+          <div
+            style={{
+              marginTop: 12,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {!loading && g2a.length === 0 && <div style={{ opacity: 0.8 }}>Rien à échanger ici 🎈</div>}
 
-          {g2a.map((r) => (
-            <article key={r.card.id} className="card">
-              <div className="cardMedia">
-                <img src={r.card.imageUrl || PLACEHOLDER} alt={r.card.name} loading="lazy" />
+            {g2a.map((r) => (
+              <article key={r.card.id} className="card">
+                <div className="cardMedia">
+                  <img src={r.card.imageUrl || PLACEHOLDER} alt={r.card.name} loading="lazy" />
+                  <div className="corner ok">À donner: {r.give}</div>
 
-                <div className="corner ok">À donner: {r.give}</div>
+                  <div className="overlay">
+                    <div className="ovTitle">{r.card.name}</div>
+                    <div className="ovMeta">
+                      {r.card.setName}
+                      {r.card.setCode ? " • Chapitre " + r.card.setCode : ""}
+                      <br />
+                      {tInk(r.card.ink)} • {tRarity(r.card.rarity)} • Coût {r.card.cost ?? "—"}
+                      <br />
+                      Angèle: {r.gQty} • Adrien: {r.aQty}
+                    </div>
 
-                <div className="overlay">
-                  <div className="ovTitle">{r.card.name}</div>
-                  <div className="ovMeta">
-                    {r.card.setName}
-                    {r.card.setCode ? " • Chapitre " + r.card.setCode : ""}
-                    <br />
-                    {tInk(r.card.ink)} • {tRarity(r.card.rarity)} • Coût {r.card.cost ?? "—"}
-                    <br />
-                    Angèle: {r.gQty} • Adrien: {r.aQty}
-                  </div>
-
-                  <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                    <button
-                      className="btn"
-                      disabled={busy === "angele->adrien:" + r.card.id}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        markGiven("angele", "adrien", r.card.id, 1);
-                      }}
-                    >
-                      {busy === "angele->adrien:" + r.card.id ? "⏳..." : "✅ Donné"}
-                    </button>
+                    <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                      <button
+                        className="btn"
+                        disabled={busy === "angele->adrien:" + r.card.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          markGiven("angele", "adrien", r.card.id, 1);
+                        }}
+                      >
+                        {busy === "angele->adrien:" + r.card.id ? "⏳..." : "✅ Donné"}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
+
+      <Toast msg={toast} onClose={() => setToast(null)} />
     </main>
   );
 }
