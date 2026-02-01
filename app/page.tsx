@@ -6,14 +6,17 @@ type Card = {
   id: string;
   name: string;
   setName: string;
-  setCode?: string | null; // "1".."10"
-  ink?: string | null;     // Amber, Ruby...
+  setCode?: string | null;
+  ink?: string | null;
   rarity?: string | null;
   cost?: number | null;
   imageUrl?: string | null;
 };
 
-type ColRow = { cardId: string; quantity: number };
+type ColQty = {
+  normal: number;
+  foil: number;
+};
 
 const INKS = ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"] as const;
 
@@ -21,131 +24,107 @@ function cx(...parts: Array<string | false | undefined | null>) {
   return parts.filter(Boolean).join(" ");
 }
 
+
+
+const PLACEHOLDER =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='900'%3E%3Crect width='100%25' height='100%25' fill='%23f7edd9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b5e50' font-size='28' font-family='Arial'%3EImage indisponible%3C/text%3E%3C/svg%3E";
+
 export default function Home() {
+  const [variantByCard, setVariantByCard] = useState<Record<string, "normal" | "foil">>({});
   const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
   const [cards, setCards] = useState<Card[]>([]);
-  const [loadingCards, setLoadingCards] = useState(true);
-  const [cardsError, setCardsError] = useState<string | null>(null);
-  const [col, setCol] = useState<Record<string, number>>({});
+  const [col, setCol] = useState<Record<string, ColQty>>({});
 
   const [q, setQ] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
+  const [chapter, setChapter] = useState<"all" | string>("all");
+  const [inks, setInks] = useState<Set<string>>(new Set());
 
-  const [chapter, setChapter] = useState<"all" | string>("all"); // "all" ou "1".."10"
-  const [inks, setInks] = useState<Set<string>>(new Set()); // multi-select
-
+  /* ------------------ LOAD USER ------------------ */
   useEffect(() => {
     const u = (localStorage.getItem("activeUser") as any) || "adrien";
     setUserId(u);
   }, []);
 
+  /* ------------------ LOAD CARDS ------------------ */
   useEffect(() => {
-  let cancelled = false;
+    fetch("/api/cards", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => setCards(Array.isArray(data) ? data : []));
+  }, []);
 
-  async function loadCards() {
-    try {
-      setLoadingCards(true);
-      setCardsError(null);
-
-      const r = await fetch("/api/cards", { cache: "no-store" });
-      if (!r.ok) throw new Error(`API /api/cards: ${r.status}`);
-
-      const data = await r.json();
-      if (!cancelled) setCards(Array.isArray(data) ? data : []);
-    } catch (e: any) {
-      if (!cancelled) setCardsError(String(e?.message || e));
-    } finally {
-      if (!cancelled) setLoadingCards(false);
-    }
-  }
-
-  loadCards();
-  return () => {
-    cancelled = true;
-  };
-}, []);
-
-
+  /* ------------------ LOAD COLLECTION ------------------ */
   useEffect(() => {
     fetch(`/api/collection?userId=${userId}`)
       .then((r) => r.json())
-      .then((rows: ColRow[]) => {
-        const map: Record<string, number> = {};
-        rows.forEach((x) => (map[x.cardId] = x.quantity));
+      .then((rows: any[]) => {
+        const map: Record<string, ColQty> = {};
+        rows.forEach((r) => {
+          map[r.cardId] = {
+            normal: r.normal ?? 0,
+            foil: r.foil ?? 0,
+          };
+        });
         setCol(map);
       });
   }, [userId]);
 
-  async function setQty(cardId: string, quantity: number) {
-  const next = Math.max(0, quantity);
+  /* ------------------ SET QTY ------------------ */
+  async function setQty(cardId: string, variant: "normal" | "foil", qty: number) {
+    const next = Math.max(0, qty);
+    const prev = col[cardId] || { normal: 0, foil: 0 };
 
-  // On garde une copie pour rollback si l'API plante
-  const prev = col[cardId] || 0;
+    setCol((p) => ({
+      ...p,
+      [cardId]: { ...prev, [variant]: next },
+    }));
 
-  // Optimiste
-  setCol((p) => ({ ...p, [cardId]: next }));
-
-  try {
-    const res = await fetch("/api/collection/setQty", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, cardId, quantity: next }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`${res.status} ${text}`);
+    try {
+      const res = await fetch("/api/collection/setQty", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, cardId, variant, quantity: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setCol((p) => ({ ...p, [cardId]: prev }));
+      alert("❌ Erreur de sauvegarde");
     }
-  } catch (e) {
-    // Rollback + message clair
-    setCol((p) => ({ ...p, [cardId]: prev }));
-    alert("❌ Sauvegarde impossible. Regarde les logs Vercel (Function setQty).");
   }
-}
 
-
+  /* ------------------ FILTERS ------------------ */
   function toggleInk(ink: string) {
-    setInks((prev) => {
-      const n = new Set(prev);
-      if (n.has(ink)) n.delete(ink);
-      else n.add(ink);
+    setInks((p) => {
+      const n = new Set(p);
+      n.has(ink) ? n.delete(ink) : n.add(ink);
       return n;
     });
   }
 
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
+    const s = q.toLowerCase().trim();
     return cards.filter((c) => {
-      // recherche
       if (s && !c.name.toLowerCase().includes(s)) return false;
 
-      // manquantes
-      const qty = col[c.id] || 0;
-      if (onlyMissing && qty !== 0) return false;
+      const qty = col[c.id];
+      if (onlyMissing && (qty?.normal || 0) + (qty?.foil || 0) > 0) return false;
 
-      // chapitre
-      if (chapter !== "all" && String(c.setCode ?? "") !== String(chapter)) return false;
-
-      // encre
-      if (inks.size > 0) {
-        const ink = c.ink ?? "";
-        if (!inks.has(ink)) return false;
-      }
+      if (chapter !== "all" && String(c.setCode ?? "") !== chapter) return false;
+      if (inks.size && !inks.has(c.ink ?? "")) return false;
 
       return true;
     });
   }, [cards, q, onlyMissing, chapter, inks, col]);
 
   const chapters = useMemo(() => {
-    // On liste uniquement les chapitres présents (1..10)
     const s = new Set<string>();
-    for (const c of cards) {
-      const code = c.setCode ? String(c.setCode) : "";
-      if (/^\d+$/.test(code) && Number(code) >= 1 && Number(code) <= 10) s.add(code);
-    }
-    return Array.from(s).sort((a, b) => Number(a) - Number(b));
+    cards.forEach((c) => {
+      if (c.setCode && /^\d+$/.test(c.setCode)) s.add(c.setCode);
+    });
+    return [...s].sort((a, b) => Number(a) - Number(b));
   }, [cards]);
 
+  /* ------------------ RENDER ------------------ */
   return (
     <main className="shell">
       <header className="topbar">
@@ -153,38 +132,22 @@ export default function Home() {
           <div className="sigil">📜</div>
           <div>
             <h1>Grimoire Lorcana</h1>
-            <p>
-              {loadingCards
-                ? "⏳ Chargement des cartes…"
-                : cardsError
-                ? "❌ Erreur de chargement"
-                : `${filtered.length} cartes affichées`}
-            </p>
-
+            <p>{filtered.length} cartes</p>
           </div>
         </div>
 
         <div className="controls">
-          <input
-            className="pill"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="🔎 Rechercher une carte…"
-          />
+          <input className="pill" value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 Rechercher…" />
 
-          <label className="pill" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              checked={onlyMissing}
-              onChange={(e) => setOnlyMissing(e.target.checked)}
-            />
+          <label className="pill">
+            <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
             Manquantes
           </label>
 
           <select
             value={userId}
             onChange={(e) => {
-              const v = e.target.value as "adrien" | "angele";
+              const v = e.target.value as any;
               setUserId(v);
               localStorage.setItem("activeUser", v);
             }}
@@ -192,113 +155,88 @@ export default function Home() {
             <option value="adrien">Adrien</option>
             <option value="angele">Angèle</option>
           </select>
-
-          <a className="link" href="/stats">📊 Stats</a>
-          <a className="link" href="/gift">🎁 Doubles</a>
-          <a className="link" href="/chapitres">📚 Chapitres</a>
-          <a className="link" href="/echange">🤝 Échange</a>
-
-
         </div>
       </header>
-      
-      {cardsError && (
-  <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
-    <p>❌ Impossible de charger les cartes: {cardsError}</p>
-    <button className="btn" onClick={() => location.reload()}>Réessayer</button>
-  </div>
-)}
 
-      {/* Filtres premium */}
-      <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
-        <div className="filters">
-          <b style={{ opacity: 0.85 }}>Chapitre</b>
-          <div className="chips">
-            <span className={cx("chip small", chapter === "all" && "active")} onClick={() => setChapter("all")}>
-              Tous
+      {/* Filtres */}
+      <div className="topbar" style={{ marginTop: 12 }}>
+        <div className="chips">
+          <span className={cx("chip", chapter === "all" && "active")} onClick={() => setChapter("all")}>
+            Tous
+          </span>
+          {chapters.map((c) => (
+            <span key={c} className={cx("chip", chapter === c && "active")} onClick={() => setChapter(c)}>
+              {c}
             </span>
-            {chapters.map((ch) => (
-              <span
-                key={ch}
-                className={cx("chip small", chapter === ch && "active")}
-                onClick={() => setChapter(ch)}
-              >
-                {ch}
-              </span>
-            ))}
-          </div>
+          ))}
         </div>
 
-        <div className="filters">
-          <b style={{ opacity: 0.85 }}>Encre</b>
-          <div className="chips">
-            {INKS.map((ink) => (
-              <span
-                key={ink}
-                className={cx("chip small", `ink-${ink}`, inks.has(ink) && "active")}
-                onClick={() => toggleInk(ink)}
-              >
-                {ink}
-              </span>
-            ))}
-            {inks.size > 0 && (
-              <button className="btn" onClick={() => setInks(new Set())}>
-                Réinitialiser
-              </button>
-            )}
-          </div>
+        <div className="chips">
+          {INKS.map((i) => (
+            <span key={i} className={cx("chip", inks.has(i) && "active")} onClick={() => toggleInk(i)}>
+              {i}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* Galerie */}
+      {/* CARTES */}
       <section className="grid">
         {filtered.map((c) => {
-          const qty = col[c.id] || 0;
-          const cornerClass = qty > 1 ? "double" : qty === 1 ? "ok" : "missing";
-          const cornerText = qty > 1 ? "🎁 Double" : qty === 1 ? "✅ OK" : "⬜ 0";
+          const variant = variantByCard[c.id] ?? "normal";
+          const qty = col[`${c.id}:${variant}`] || 0;
+          const total = qty.normal + qty.foil;
 
           return (
             <article key={c.id} className="card">
               <div className="cardMedia">
-                <img
-  src={
-    c.imageUrl ||
-    "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E"
-  }
-  alt={c.name}
-  loading="lazy"
-  onError={(e) => {
-    const img = e.currentTarget;
+                <img src={c.imageUrl || PLACEHOLDER} alt={c.name} loading="lazy" />
 
-    // Évite boucle infinie
-    if (img.dataset.fallback === "1") {
-      img.src =
-        "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E";
-      return;
-    }
+                <div className="variantSwitch">
+                  <button
+                    onClick={() =>
+                      setVariantByCard((p) => ({ ...p, [c.id]: "normal" }))
+                    }
+                    style={{ fontWeight: variant === "normal" ? "bold" : "normal" }}
+                  >
+                    Normal
+                  </button>
 
-    // Retry 1 fois (cache-bust)
-    img.dataset.fallback = "1";
-    const original = img.src;
-    img.src = original.includes("?")
-      ? original + "&retry=1"
-      : original + "?retry=1";
-  }}
-/>
+                  <button
+                    onClick={() =>
+                      setVariantByCard((p) => ({ ...p, [c.id]: "foil" }))
+                    }
+                    style={{ fontWeight: variant === "foil" ? "bold" : "normal" }}
+                  >
+                    ✨ Brillante
+                  </button>
+                </div>
+ 
+                <div className="qtyPill two">
+                  <div className="line">
+                    <span>N</span>
+                    <button onClick={() => setQty(c.id, "normal", qty.normal - 1)}>−</button>
+                    <div className="num">{qty.normal}</div>
+                    <button onClick={() => setQty(c.id, "normal", qty.normal + 1)}>+</button>
+                  </div>
 
-
-                <div className="qtyPill">
-                  <button onClick={() => setQty(c.id, qty - 1)} aria-label="Diminuer">−</button>
-                  <div className="num">{qty}</div>
-                  <button onClick={() => setQty(c.id, qty + 1)} aria-label="Augmenter">+</button>
+                  <div className="line">
+                    <span>✨</span>
+                    <button onClick={() => setQty(c.id, "foil", qty.foil - 1)}>−</button>
+                    <div className="num">{qty.foil}</div>
+                    <button onClick={() => setQty(c.id, "foil", qty.foil + 1)}>+</button>
+                  </div>
                 </div>
 
-                <div className={`corner ${cornerClass}`}>{cornerText}</div>
+                <div className={cx("corner", total === 0 && "missing", total === 1 && "ok", total > 1 && "double")}>
+                  {total === 0 ? "⬜ 0" : total === 1 ? "✅ OK" : "🎁 Double"}
+                </div>
 
                 <div className="overlay">
                   <div className="ovTitle">{c.name}</div>
                   <div className="ovMeta">
-                    {c.setName}{c.setCode ? ` • Chapitre ${c.setCode}` : ""}<br />
+                    {c.setName} • Chapitre {c.setCode}
+                    <br />
                     {tInk(c.ink)} • {tRarity(c.rarity)} • Coût {c.cost ?? "—"}
                   </div>
                 </div>

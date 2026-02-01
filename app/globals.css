@@ -91,6 +91,26 @@ body{
   outline:none;
 }
 
+.pill-container {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.pill {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #e5e5e5;
+  font-size: 14px;
+}
+
+.brillante {
+  background: linear-gradient(135deg, gold, orange);
+  color: black;
+  font-weight: bold;
+}
+
+
 input.pill{
   min-width: 240px;
 }
@@ -349,7 +369,7 @@ input.pill{
 }
 
 .corner.missing{ opacity: .8; }
-.corner.ok{ }
+.corner.ok{background: gold;}
 .corner.double{
   border-color: rgba(184,137,43,.35);
   background: linear-gradient(180deg, rgba(226,195,106,.65), rgba(184,137,43,.25));

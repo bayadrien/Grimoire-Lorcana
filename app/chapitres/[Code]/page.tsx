@@ -14,7 +14,11 @@ type Card = {
   imageUrl?: string | null;
 };
 
-type ColRow = { cardId: string; quantity: number };
+type ColRow = {
+  cardId: string;
+  normal: number;
+  foil: number;
+};
 
 const PLACEHOLDER =
   "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E";
@@ -24,7 +28,7 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
 
   const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
   const [cards, setCards] = useState<Card[]>([]);
-  const [col, setCol] = useState<Record<string, number>>({});
+  const [col, setCol] = useState<Record<string, { normal: number; foil: number }>>({});
   const [q, setQ] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
 
@@ -36,34 +40,44 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
   useEffect(() => {
     fetch("/api/cards", { cache: "no-store" })
       .then((r) => r.json())
-      .then((data) => setCards(Array.isArray(data) ? data : Array.isArray(data?.cards) ? data.cards : []));
+      .then((data) =>
+        setCards(Array.isArray(data) ? data : Array.isArray(data?.cards) ? data.cards : [])
+      );
   }, []);
 
   useEffect(() => {
     fetch(`/api/collection?userId=${userId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((rows: ColRow[]) => {
-        const map: Record<string, number> = {};
-        rows.forEach((x) => (map[x.cardId] = x.quantity));
+        const map: Record<string, { normal: number; foil: number }> = {};
+        rows.forEach((r) => {
+          map[r.cardId] = { normal: r.normal || 0, foil: r.foil || 0 };
+        });
         setCol(map);
       });
   }, [userId]);
 
-  async function setQty(cardId: string, quantity: number) {
-    const next = Math.max(0, quantity);
-    const prev = col[cardId] || 0;
-    setCol((p) => ({ ...p, [cardId]: next }));
+  async function setQty(cardId: string, type: "normal" | "foil", value: number) {
+    const next = Math.max(0, value);
+    const prev = col[cardId] || { normal: 0, foil: 0 };
+
+    const updated = {
+      normal: type === "normal" ? next : prev.normal,
+      foil: type === "foil" ? next : prev.foil,
+    };
+
+    setCol((p) => ({ ...p, [cardId]: updated }));
 
     try {
       const res = await fetch("/api/collection/setQty", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, cardId, quantity: next }),
+        body: JSON.stringify({ userId, cardId, ...updated }),
       });
-      if (!res.ok) throw new Error(`${res.status}`);
+      if (!res.ok) throw new Error();
     } catch {
       setCol((p) => ({ ...p, [cardId]: prev }));
-      alert("❌ Sauvegarde impossible (API).");
+      alert("❌ Sauvegarde impossible.");
     }
   }
 
@@ -72,7 +86,11 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
     return cards
       .filter((c) => String(c.setCode ?? "") === String(code))
       .filter((c) => (s ? c.name.toLowerCase().includes(s) : true))
-      .filter((c) => (onlyMissing ? (col[c.id] || 0) === 0 : true));
+      .filter((c) =>
+        onlyMissing
+          ? (col[c.id]?.normal || 0) + (col[c.id]?.foil || 0) === 0
+          : true
+      );
   }, [cards, code, q, onlyMissing, col]);
 
   const setName = useMemo(() => {
@@ -125,19 +143,34 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
 
       <section className="grid" style={{ marginTop: 12 }}>
         {chapterCards.map((c) => {
-          const qty = col[c.id] || 0;
-          const cornerClass = qty > 1 ? "double" : qty === 1 ? "ok" : "missing";
-          const cornerText = qty > 1 ? "🎁 Double" : qty === 1 ? "✅ OK" : "⬜ 0";
+          const normal = col[c.id]?.normal || 0;
+          const foil = col[c.id]?.foil || 0;
+          const total = normal + foil;
+
+          const cornerClass =
+            total > 1 ? "double" : total === 1 ? "ok" : "missing";
+          const cornerText =
+            total > 1 ? "🎁 Double" : total === 1 ? "✅ OK" : "⬜ 0";
 
           return (
             <article key={c.id} className="card">
               <div className="cardMedia">
                 <img src={c.imageUrl || PLACEHOLDER} alt={c.name} loading="lazy" />
 
-                <div className="qtyPill">
-                  <button onClick={() => setQty(c.id, qty - 1)} aria-label="Diminuer">−</button>
-                  <div className="num">{qty}</div>
-                  <button onClick={() => setQty(c.id, qty + 1)} aria-label="Augmenter">+</button>
+                <div className="qtyPill two">
+                  <div className="line">
+                    <span>N</span>
+                    <button onClick={() => setQty(c.id, "normal", normal - 1)}>−</button>
+                    <div className="num">{normal}</div>
+                    <button onClick={() => setQty(c.id, "normal", normal + 1)}>+</button>
+                  </div>
+
+                  <div className="line">
+                    <span>✨</span>
+                    <button onClick={() => setQty(c.id, "foil", foil - 1)}>−</button>
+                    <div className="num">{foil}</div>
+                    <button onClick={() => setQty(c.id, "foil", foil + 1)}>+</button>
+                  </div>
                 </div>
 
                 <div className={`corner ${cornerClass}`}>{cornerText}</div>
@@ -156,10 +189,28 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
       </section>
 
       <style jsx>{`
-        .grid{
-          display:grid;
+        .grid {
+          display: grid;
           grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
           gap: 12px;
+        }
+
+        .qtyPill.two {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .qtyPill .line {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .qtyPill span {
+          width: 18px;
+          text-align: center;
+          font-weight: bold;
         }
       `}</style>
     </main>

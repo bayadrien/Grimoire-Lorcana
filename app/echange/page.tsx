@@ -15,6 +15,8 @@ type Card = {
   imageUrl?: string | null;
 };
 
+type Finish = "normal" | "foil";
+
 type Row = { card: Card; give: number; aQty: number; gQty: number };
 
 type Payload = {
@@ -36,6 +38,7 @@ export default function EchangePage() {
   const [q, setQ] = useState("");
   const [chapter, setChapter] = useState<string>("all");
   const [ink, setInk] = useState<string>("all");
+  const [finishByCard, setFinishByCard] = useState<Record<string, "normal" | "foil">>({});
 
   const [data, setData] = useState<Payload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +94,8 @@ export default function EchangePage() {
     fromUser: "adrien" | "angele",
     toUser: "adrien" | "angele",
     cardId: string,
-    quantity = 1
+    quantity = 1,
+    finish: "normal" | "foil" = "normal"
   ) {
     const key = fromUser + "->" + toUser + ":" + cardId;
     if (busy) return;
@@ -101,7 +105,7 @@ export default function EchangePage() {
       const res = await fetch("/api/trades/give", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fromUser, toUser, cardId, quantity }),
+        body: JSON.stringify({ fromUser, toUser, cardId, quantity, finish }),
       });
 
       const j = await res.json().catch(() => null);
@@ -294,11 +298,47 @@ export default function EchangePage() {
                         disabled={busy === "adrien->angele:" + r.card.id}
                         onClick={(e) => {
                           e.preventDefault();
-                          markGiven("adrien", "angele", r.card.id, 1);
+                          const finish = finishByCard[r.card.id] ?? "normal";
+                          markGiven("adrien", "angele", r.card.id, 1, finish);
                         }}
                       >
+
+                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                          <button
+                            className={finishByCard[r.card.id] !== "foil" ? "btn active" : "btn"}
+                            onClick={() =>
+                              setFinishByCard((s) => ({ ...s, [r.card.id]: "normal" }))
+                            }
+                          >
+                            Normal
+                          </button>
+
+                          <button
+                            className={finishByCard[r.card.id] === "foil" ? "btn active" : "btn"}
+                            onClick={() =>
+                              setFinishByCard((s) => ({ ...s, [r.card.id]: "foil" }))
+                            }
+                          >
+                            ✨ Brillante
+                          </button>
+                        </div>
+                        
                         {busy === "adrien->angele:" + r.card.id ? "⏳..." : "✅ Donné"}
                       </button>
+
+                      <select
+                        value={finishByCard[r.card.id] ?? "normal"}
+                        onChange={(e) =>
+                          setFinishByCard((s) => ({
+                            ...s,
+                            [r.card.id]: e.target.value as "normal" | "foil",
+                          }))
+                        }
+                        className="pill"
+                      >
+                        <option value="normal">🃏 Normale</option>
+                        <option value="foil">✨ Brillante</option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -359,7 +399,8 @@ export default function EchangePage() {
                         disabled={busy === "angele->adrien:" + r.card.id}
                         onClick={(e) => {
                           e.preventDefault();
-                          markGiven("angele", "adrien", r.card.id, 1);
+                          const finish = finishByCard[r.card.id] ?? "normal";
+                          markGiven("angele", "adrien", r.card.id, 1, finish);
                         }}
                       >
                         {busy === "angele->adrien:" + r.card.id ? "⏳..." : "✅ Donné"}

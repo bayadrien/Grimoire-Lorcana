@@ -37,12 +37,13 @@ model Card {
 model Collection {
   userId   String
   cardId   String
+  variant  String   // "normal" | "foil"
   quantity Int
 
   user User @relation(fields: [userId], references: [id])
   card Card @relation(fields: [cardId], references: [id])
 
-  @@id([userId, cardId])
+  @@unique([userId, cardId, variant])
 }
 
 model Trade {
