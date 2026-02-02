@@ -12,7 +12,11 @@ type Card = {
   imageUrl?: string | null;
 };
 
-type ColRow = { cardId: string; quantity: number };
+type ColRow = {
+  cardId: string;
+  variant: "normal" | "foil";
+  quantity: number;
+};
 
 function pct(a: number, b: number) {
   if (!b) return 0;
@@ -21,8 +25,11 @@ function pct(a: number, b: number) {
 
 export default function ChapitresAlbum() {
   const [cards, setCards] = useState<Card[]>([]);
-  const [aCol, setACol] = useState<Record<string, number>>({});
-  const [gCol, setGCol] = useState<Record<string, number>>({});
+
+  type ColQty = { normal: number; foil: number };
+const [aCol, setACol] = useState<Record<string, ColQty>>({});
+const [gCol, setGCol] = useState<Record<string, ColQty>>({});
+
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -48,10 +55,18 @@ export default function ChapitresAlbum() {
         const aJ: ColRow[] = await aR.json();
         const gJ: ColRow[] = await gR.json();
 
-        const aMap: Record<string, number> = {};
-        const gMap: Record<string, number> = {};
-        aJ.forEach((x) => (aMap[x.cardId] = x.quantity));
-        gJ.forEach((x) => (gMap[x.cardId] = x.quantity));
+        const aMap: Record<string, { normal: number; foil: number }> = {};
+        const gMap: Record<string, { normal: number; foil: number }> = {};
+
+        aJ.forEach((r) => {
+          if (!aMap[r.cardId]) aMap[r.cardId] = { normal: 0, foil: 0 };
+          aMap[r.cardId][r.variant] = r.quantity;
+        });
+
+        gJ.forEach((r) => {
+          if (!gMap[r.cardId]) gMap[r.cardId] = { normal: 0, foil: 0 };
+          gMap[r.cardId][r.variant] = r.quantity;
+        });
 
         if (!cancel) {
           setCards(Array.isArray(cardsJ) ? cardsJ : Array.isArray(cardsJ?.cards) ? cardsJ.cards : []);
@@ -94,8 +109,16 @@ export default function ChapitresAlbum() {
       const row = map.get(code)!;
       row.total += 1;
 
-      const aHas = (aCol[c.id] ?? 0) > 0;
-      const gHas = (gCol[c.id] ?? 0) > 0;
+      const aQty =
+        (aCol[c.id]?.normal ?? 0) +
+        (aCol[c.id]?.foil ?? 0);
+
+      const gQty =
+        (gCol[c.id]?.normal ?? 0) +
+        (gCol[c.id]?.foil ?? 0);
+
+      const aHas = aQty > 0;
+      const gHas = gQty > 0;
 
       if (aHas) row.aOwned += 1;
       if (gHas) row.gOwned += 1;

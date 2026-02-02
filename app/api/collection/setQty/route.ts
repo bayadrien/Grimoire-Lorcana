@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // 👤 S'assure que l'utilisateur existe
+  // 👤 S'assurer que l'utilisateur existe
   await prisma.user.upsert({
     where: { id: userId },
     update: {},
@@ -26,15 +26,28 @@ export async function POST(req: Request) {
 
   const q = Math.max(0, quantity);
 
-  // 🗑️ Si quantité = 0 → on supprime UNIQUEMENT cette variante
+  // 🔍 Cherche la ligne existante
+  const existing = await prisma.collection.findFirst({
+    where: {
+      userId,
+      cardId,
+      variant,
+    },
+  });
+
+  // 🗑️ Quantité = 0 → supprimer UNIQUEMENT cette variante
   if (q === 0) {
-    await prisma.collection.deleteMany({
-      where: {
-        userId,
-        cardId,
-        variant,
-      },
-    });
+    if (existing) {
+      await prisma.collection.delete({
+        where: {
+          userId_cardId_variant: {
+            userId,
+            cardId,
+            variant,
+          },
+        },
+      });
+    }
 
     return NextResponse.json({
       ok: true,
@@ -44,25 +57,30 @@ export async function POST(req: Request) {
     });
   }
 
-  // 💾 Upsert par (userId + cardId + variant)
-  await prisma.collection.upsert({
-    where: {
-      userId_cardId_variant: {
+  // ✏️ Update ou Create
+  if (existing) {
+    await prisma.collection.update({
+      where: {
+        userId_cardId_variant: {
+          userId,
+          cardId,
+          variant,
+        },
+      },
+      data: {
+        quantity: q,
+      },
+    });
+  } else {
+    await prisma.collection.create({
+      data: {
         userId,
         cardId,
         variant,
+        quantity: q,
       },
-    },
-    update: {
-      quantity: q,
-    },
-    create: {
-      userId,
-      cardId,
-      variant,
-      quantity: q,
-    },
-  });
+    });
+  }
 
   return NextResponse.json({
     ok: true,

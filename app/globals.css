@@ -529,3 +529,317 @@ input.pill{
 .listMain{ min-width: 0; }
 .listTitle{ font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .listMeta{ font-size: 13px; opacity: .82; margin-top: 3px; }
+
+.variantSwitch {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.variantBtn {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,.15);
+  background: rgba(255,255,255,.6);
+  cursor: pointer;
+}
+
+.variantBtn.active {
+  background: #1f2937;
+  color: white;
+  font-weight: 600;
+}
+
+.qtyPill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.qtyPill.mobile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qtyPill.mobile button {
+  background: rgba(255,255,255,0.85);
+  border: none;
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.qtyPill.mobile .num {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.qtyPill .variantToggle {
+  background: rgba(0,0,0,0.05);
+  color: #666;
+}
+
+.qtyPill .variantToggle.active {
+  background: linear-gradient(135deg, #ffe58a, #f5b700);
+  color: #000;
+}
+
+/* ✨ Mode brillante actif */
+.qtyPill.foil-active {
+  background: linear-gradient(135deg, #f6d365, #fda085);
+  box-shadow: 0 0 0 2px rgba(255, 215, 100, 0.6);
+  animation: foilPulse 0.25s ease-out;
+}
+
+/* Petite animation satisfaisante */
+@keyframes foilPulse {
+  from {
+    transform: scale(0.96);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.qtyTotal {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+  text-align: center;
+}
+
+/* ===== MENU RESPONSIVE ===== */
+
+.nav-desktop {
+  display: flex;
+  gap: 12px;
+}
+
+.burger {
+  display: none;
+  font-size: 22px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .nav-desktop {
+    display: none;
+  }
+
+  .burger {
+    display: block;
+  }
+}
+
+/* OVERLAY */
+.mobileMenuBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* PANEL */
+.mobileMenu {
+  width: 260px;
+  background: #fffaf0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideIn 0.25s ease-out;
+}
+
+.mobileMenu a {
+  font-size: 18px;
+  text-decoration: none;
+  color: #2d2a26;
+}
+
+.mobileMenu .close {
+  align-self: flex-end;
+  font-size: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+/* ===== NAV BUTTONS (HEADER) ===== */
+
+.nav-desktop a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 8px 14px;
+  border-radius: 999px;
+
+  background: rgba(0, 0, 0, 0.06);
+  color: #2d2a26;
+  font-weight: 500;
+  font-size: 14px;
+
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.nav-desktop a:hover {
+  background: rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+/* Mobile helpers */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+  .show-mobile {
+    display: inline-flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .show-mobile {
+    display: none !important;
+  }
+}
+
+/* Mobile menu */
+.mobileOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 50;
+}
+
+.mobileMenu {
+  background: #fffaf0;
+  border-radius: 16px;
+  padding: 16px;
+  margin: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobileMenu a {
+  padding: 10px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.mobileMenu hr {
+  border: none;
+  border-top: 1px solid rgba(0,0,0,.15);
+  margin: 8px 0;
+}
+
+.close {
+  align-self: flex-end;
+  font-size: 20px;
+  background: none;
+  border: none;
+}
+/* ===== QTY PILL (chapitres aligné home) ===== */
+
+.qtyPill.stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.qtyPill.stacked .row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qtyPill button {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.12);
+  color: inherit;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.qtyPill .num {
+  min-width: 22px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.qtyPill .badge {
+  font-size: 12px;
+  opacity: .85;
+}
+
+/* ===== QTY PILL UNIFIÉE ===== */
+
+.qtyPill.unified {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.14);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.25);
+}
+
+.qtyPill.unified button {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255,255,255,.22);
+  font-size: 18px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.qtyPill.unified .num {
+  min-width: 22px;
+  text-align: center;
+  font-weight: 800;
+}
+
+.qtyPill.unified .variantBtn {
+  margin-left: 6px;
+  background: rgba(255,255,255,.18);
+  font-size: 16px;
+  opacity: .7;
+}
+
+.qtyPill.unified .variantBtn.active {
+  background: linear-gradient(135deg, #ffd56a, #ff9f43);
+  opacity: 1;
+}

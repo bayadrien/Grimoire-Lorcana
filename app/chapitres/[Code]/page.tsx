@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
 
 type Card = {
@@ -16,63 +17,74 @@ type Card = {
 
 type ColRow = {
   cardId: string;
+  variant: "normal" | "foil";
+  quantity: number;
+};
+
+type ColQty = {
   normal: number;
   foil: number;
 };
 
 const PLACEHOLDER =
-  "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='900'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f7edd9'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%236b5e50'%20font-size='28'%20font-family='Arial'%3EImage%20indisponible%3C/text%3E%3C/svg%3E";
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='900'%3E%3Crect width='100%25' height='100%25' fill='%23f7edd9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b5e50' font-size='28' font-family='Arial'%3EImage indisponible%3C/text%3E%3C/svg%3E";
 
-export default function ChapitreDetail({ params }: { params: { code: string } }) {
-  const code = params.code;
-
+export default function ChapitreDetail() {
+  const params = useParams();
+  const chapterCode = Number(params.code);
+  const [variantByCard, setVariantByCard] = useState<Record<string, "normal" | "foil">>({});
   const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
   const [cards, setCards] = useState<Card[]>([]);
-  const [col, setCol] = useState<Record<string, { normal: number; foil: number }>>({});
+  const [col, setCol] = useState<Record<string, ColQty>>({});
   const [q, setQ] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
 
+  /* ================= USER ================= */
   useEffect(() => {
     const u = (localStorage.getItem("activeUser") as any) || "adrien";
     setUserId(u);
   }, []);
 
+  /* ================= CARDS ================= */
   useEffect(() => {
     fetch("/api/cards", { cache: "no-store" })
       .then((r) => r.json())
-      .then((data) =>
-        setCards(Array.isArray(data) ? data : Array.isArray(data?.cards) ? data.cards : [])
-      );
+      .then((data) => setCards(Array.isArray(data) ? data : []));
   }, []);
 
+  /* ================= COLLECTION ================= */
   useEffect(() => {
     fetch(`/api/collection?userId=${userId}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((rows: ColRow[]) => {
-        const map: Record<string, { normal: number; foil: number }> = {};
+        const map: Record<string, ColQty> = {};
+
         rows.forEach((r) => {
-          map[r.cardId] = { normal: r.normal || 0, foil: r.foil || 0 };
+          if (!map[r.cardId]) {
+            map[r.cardId] = { normal: 0, foil: 0 };
+          }
+          map[r.cardId][r.variant] = r.quantity;
         });
+
         setCol(map);
       });
   }, [userId]);
 
-  async function setQty(cardId: string, type: "normal" | "foil", value: number) {
+  /* ================= SET QTY ================= */
+  async function setQty(cardId: string, variant: "normal" | "foil", value: number) {
     const next = Math.max(0, value);
-    const prev = col[cardId] || { normal: 0, foil: 0 };
+    const prev = col[cardId] ?? { normal: 0, foil: 0 };
 
-    const updated = {
-      normal: type === "normal" ? next : prev.normal,
-      foil: type === "foil" ? next : prev.foil,
-    };
-
-    setCol((p) => ({ ...p, [cardId]: updated }));
+    setCol((p) => ({
+      ...p,
+      [cardId]: { ...prev, [variant]: next },
+    }));
 
     try {
       const res = await fetch("/api/collection/setQty", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, cardId, ...updated }),
+        body: JSON.stringify({ userId, cardId, variant, quantity: next }),
       });
       if (!res.ok) throw new Error();
     } catch {
@@ -81,30 +93,33 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
     }
   }
 
+  /* ================= FILTERS ================= */
   const chapterCards = useMemo(() => {
     const s = q.trim().toLowerCase();
+
     return cards
-      .filter((c) => String(c.setCode ?? "") === String(code))
+      .filter((c) => Number(c.setCode) === chapterCode)
       .filter((c) => (s ? c.name.toLowerCase().includes(s) : true))
       .filter((c) =>
         onlyMissing
-          ? (col[c.id]?.normal || 0) + (col[c.id]?.foil || 0) === 0
+          ? (col[c.id]?.normal ?? 0) + (col[c.id]?.foil ?? 0) === 0
           : true
       );
-  }, [cards, code, q, onlyMissing, col]);
+  }, [cards, chapterCode, q, onlyMissing, col]);
 
   const setName = useMemo(() => {
-    const any = cards.find((c) => String(c.setCode ?? "") === String(code));
-    return any?.setName || `Chapitre ${code}`;
-  }, [cards, code]);
+    const any = cards.find((c) => Number(c.setCode) === chapterCode);
+    return any?.setName || `Chapitre ${chapterCode}`;
+  }, [cards, chapterCode]);
 
+  /* ================= RENDER ================= */
   return (
     <main className="shell">
       <header className="topbar">
         <div className="brand">
           <div className="sigil">📘</div>
           <div>
-            <h1>Chapitre {code}</h1>
+            <h1>Chapitre {chapterCode}</h1>
             <p>{setName} • {chapterCards.length} cartes</p>
           </div>
         </div>
@@ -112,22 +127,10 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
         <div className="controls">
           <a className="link" href="/chapitres">⬅️ Album</a>
           <a className="link" href="/">🎴 Cartes</a>
-
-          <select
-            value={userId}
-            onChange={(e) => {
-              const v = e.target.value as "adrien" | "angele";
-              setUserId(v);
-              localStorage.setItem("activeUser", v);
-            }}
-          >
-            <option value="adrien">Adrien</option>
-            <option value="angele">Angèle</option>
-          </select>
         </div>
       </header>
 
-      <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
+      <div className="topbar" style={{ marginTop: 12 }}>
         <input
           className="pill"
           value={q}
@@ -135,50 +138,77 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
           placeholder="🔎 Rechercher…"
         />
 
-        <label className="pill" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input type="checkbox" checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />
+        <label className="pill">
+          <input
+            type="checkbox"
+            checked={onlyMissing}
+            onChange={(e) => setOnlyMissing(e.target.checked)}
+          />
           Manquantes
         </label>
       </div>
 
       <section className="grid" style={{ marginTop: 12 }}>
         {chapterCards.map((c) => {
-          const normal = col[c.id]?.normal || 0;
-          const foil = col[c.id]?.foil || 0;
+          const normal = col[c.id]?.normal ?? 0;
+          const foil = col[c.id]?.foil ?? 0;
           const total = normal + foil;
-
-          const cornerClass =
-            total > 1 ? "double" : total === 1 ? "ok" : "missing";
-          const cornerText =
-            total > 1 ? "🎁 Double" : total === 1 ? "✅ OK" : "⬜ 0";
 
           return (
             <article key={c.id} className="card">
               <div className="cardMedia">
-                <img src={c.imageUrl || PLACEHOLDER} alt={c.name} loading="lazy" />
+                <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
 
-                <div className="qtyPill two">
-                  <div className="line">
-                    <span>N</span>
-                    <button onClick={() => setQty(c.id, "normal", normal - 1)}>−</button>
-                    <div className="num">{normal}</div>
-                    <button onClick={() => setQty(c.id, "normal", normal + 1)}>+</button>
-                  </div>
+                {/* COMPTEUR MOBILE AVEC VARIANTE */}
+              <div className="qtyPill unified">
+                <button
+                  onClick={() => {
+                    const v = variantByCard[c.id] ?? "normal";
+                    const current = col[c.id]?.[v] ?? 0;
+                    setQty(c.id, v, current - 1);
+                  }}
+                >
+                  −
+                </button>
 
-                  <div className="line">
-                    <span>✨</span>
-                    <button onClick={() => setQty(c.id, "foil", foil - 1)}>−</button>
-                    <div className="num">{foil}</div>
-                    <button onClick={() => setQty(c.id, "foil", foil + 1)}>+</button>
-                  </div>
+                <div className="num">
+                  {col[c.id]?.[variantByCard[c.id] ?? "normal"] ?? 0}
                 </div>
 
-                <div className={`corner ${cornerClass}`}>{cornerText}</div>
+                <button
+                  onClick={() => {
+                    const v = variantByCard[c.id] ?? "normal";
+                    const current = col[c.id]?.[v] ?? 0;
+                    setQty(c.id, v, current + 1);
+                  }}
+                >
+                  +
+                </button>
+
+                <button
+                  className={
+                    "variantBtn " +
+                    ((variantByCard[c.id] ?? "normal") === "foil" ? "active" : "")
+                  }
+                  onClick={() =>
+                    setVariantByCard((p: Record<string, "normal" | "foil">) => ({
+                      ...p,
+                      [c.id]: (p[c.id] ?? "normal") === "normal" ? "foil" : "normal",
+                    }))
+                  }
+                  aria-label="Changer variante"
+                >
+                  ✨
+                </button>
+              </div>
+
+                <div className="corner">
+                  {total === 0 ? "⬜ 0" : total === 1 ? "✅ OK" : "🎁 Double"}
+                </div>
 
                 <div className="overlay">
                   <div className="ovTitle">{c.name}</div>
                   <div className="ovMeta">
-                    {c.setName}{c.setCode ? ` • Chapitre ${c.setCode}` : ""}<br />
                     {tInk(c.ink)} • {tRarity(c.rarity)} • Coût {c.cost ?? "—"}
                   </div>
                 </div>
@@ -187,32 +217,6 @@ export default function ChapitreDetail({ params }: { params: { code: string } })
           );
         })}
       </section>
-
-      <style jsx>{`
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-          gap: 12px;
-        }
-
-        .qtyPill.two {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .qtyPill .line {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .qtyPill span {
-          width: 18px;
-          text-align: center;
-          font-weight: bold;
-        }
-      `}</style>
     </main>
   );
 }

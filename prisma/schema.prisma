@@ -8,6 +8,11 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum Variant {
+  normal
+  foil
+}
+
 model User {
   id          String       @id
   name        String
@@ -27,17 +32,17 @@ model Card {
   willpower Int?
   lore      Int?
   text      String?
-  trades    Trade[]
   imageUrl  String?
   updatedAt DateTime @updatedAt
 
   collections Collection[]
+  trades      Trade[]
 }
 
 model Collection {
   userId   String
   cardId   String
-  variant  String   // "normal" | "foil"
+  variant  Variant
   quantity Int
 
   user User @relation(fields: [userId], references: [id])
