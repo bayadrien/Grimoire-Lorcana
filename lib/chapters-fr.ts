@@ -1,4 +1,4 @@
-export const CHAPTERS: Record<string, string> = {
+export const CHAPTERS_NAMES_FR: Record<string, string> = {
   "1": "Premier Chapitre",
   "2": "L’Ascension des Floodborn",
   "3": "Les Terres d'Encres",

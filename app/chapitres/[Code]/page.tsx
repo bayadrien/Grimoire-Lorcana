@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
-import { CHAPTERS } from "@/lib/chapters";
+import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 
 type Card = {
   id: string;
@@ -33,7 +33,7 @@ const PLACEHOLDER =
 export default function ChapitreDetail() {
   const params = useParams();
   const chapterCode = Number(params.code);
-  const setName = CHAPTERS[String(chapterCode)] ?? `Chapitre ${chapterCode}`;
+  const setName = CHAPTERS_NAMES_FR[String(chapterCode)] ?? `Chapitre ${chapterCode}`;
   const [variantByCard, setVariantByCard] = useState<Record<string, "normal" | "foil">>({});
   const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
   const [cards, setCards] = useState<Card[]>([]);

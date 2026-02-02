@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { tInk } from "@/lib/lorcana-fr";
-import { CHAPTERS } from "@/lib/chapters";
+import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 
 type Card = {
   id: string;
@@ -99,7 +99,7 @@ const [gCol, setGCol] = useState<Record<string, ColQty>>({});
       if (!map.has(code)) {
         map.set(code, {
           code,
-          setName: c.setName || `Chapitre ${code}`,
+          setName: CHAPTERS_NAMES_FR[code] ?? `Chapitre ${code}`,
           total: 0,
           aOwned: 0,
           gOwned: 0,
@@ -161,7 +161,7 @@ const [gCol, setGCol] = useState<Record<string, ColQty>>({});
             <div className="albumTop">
               <div>
                 <div className="albumTitle">Chapitre {ch.code}</div>
-                <div className="albumSub">{CHAPTERS[ch.code] ?? ch.setName}</div>
+                <div className="albumSub">{CHAPTERS_NAMES_FR[ch.code] ?? ch.setName}</div>
               </div>
               <div className="albumPct">{pct(ch.duoOwned, ch.total)}%</div>
             </div>
