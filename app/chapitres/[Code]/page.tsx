@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
+import { CHAPTERS } from "@/lib/chapters";
 
 type Card = {
   id: string;
@@ -32,6 +33,7 @@ const PLACEHOLDER =
 export default function ChapitreDetail() {
   const params = useParams();
   const chapterCode = Number(params.code);
+  const setName = CHAPTERS[String(chapterCode)] ?? `Chapitre ${chapterCode}`;
   const [variantByCard, setVariantByCard] = useState<Record<string, "normal" | "foil">>({});
   const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
   const [cards, setCards] = useState<Card[]>([]);
@@ -107,10 +109,6 @@ export default function ChapitreDetail() {
       );
   }, [cards, chapterCode, q, onlyMissing, col]);
 
-  const setName = useMemo(() => {
-    const any = cards.find((c) => Number(c.setCode) === chapterCode);
-    return any?.setName || `Chapitre ${chapterCode}`;
-  }, [cards, chapterCode]);
 
   /* ================= RENDER ================= */
   return (

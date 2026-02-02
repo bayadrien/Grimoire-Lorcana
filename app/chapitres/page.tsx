@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { tInk } from "@/lib/lorcana-fr";
+import { CHAPTERS } from "@/lib/chapters";
 
 type Card = {
   id: string;
@@ -160,7 +161,7 @@ const [gCol, setGCol] = useState<Record<string, ColQty>>({});
             <div className="albumTop">
               <div>
                 <div className="albumTitle">Chapitre {ch.code}</div>
-                <div className="albumSub">{ch.setName}</div>
+                <div className="albumSub">{CHAPTERS[ch.code] ?? ch.setName}</div>
               </div>
               <div className="albumPct">{pct(ch.duoOwned, ch.total)}%</div>
             </div>

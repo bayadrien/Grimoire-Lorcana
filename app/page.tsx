@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
+import { CHAPTERS } from "@/lib/chapters";
 
 /* ================== TYPES ================== */
 
@@ -309,7 +310,7 @@ export default function Home() {
                 <div className="overlay">
                   <div className="ovTitle">{c.name}</div>
                   <div className="ovMeta">
-                    {c.setName} • Chapitre {c.setCode}
+                    {c.setName} • {CHAPTERS[c.setCode ?? ""] ?? `Chapitre ${c.setCode}`}
                     <br />
                     {tInk(c.ink)} • {tRarity(c.rarity)} • Coût {c.cost ?? "—"}
                   </div>
