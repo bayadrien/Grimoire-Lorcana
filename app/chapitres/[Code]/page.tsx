@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 
+/* ================= TYPES ================= */
+
 type Card = {
   id: string;
   name: string;
@@ -27,14 +29,40 @@ type ColQty = {
   foil: number;
 };
 
+/* ================= CONST ================= */
+
 const PLACEHOLDER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='900'%3E%3Crect width='100%25' height='100%25' fill='%23f7edd9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b5e50' font-size='28' font-family='Arial'%3EImage indisponible%3C/text%3E%3C/svg%3E";
 
+/* ================= PAGE ================= */
+
 export default function ChapitreDetail() {
-  const params = useParams();
-  const chapterCode = Number(params.code);
-  const setName = CHAPTERS_NAMES_FR[String(chapterCode)] ?? `Chapitre ${chapterCode}`;
-  const [variantByCard, setVariantByCard] = useState<Record<string, "normal" | "foil">>({});
+  const params = useParams<{ code?: string | string[] }>();
+
+  // 🔐 sécurisation ABSOLUE du code
+  const rawCode =
+    typeof params.code === "string"
+      ? params.code
+      : Array.isArray(params.code)
+      ? params.code[0]
+      : "";
+
+  const chapterCode = Number(rawCode);
+
+  if (!Number.isFinite(chapterCode)) {
+    return (
+      <main className="shell">
+        <p style={{ padding: 20 }}>❌ Chapitre invalide</p>
+      </main>
+    );
+  }
+
+  const chapterName =
+    CHAPTERS_NAMES_FR[String(chapterCode)] ?? `Chapitre ${chapterCode}`;
+
+  const [variantByCard, setVariantByCard] = useState<
+    Record<string, "normal" | "foil">
+  >({});
   const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
   const [cards, setCards] = useState<Card[]>([]);
   const [col, setCol] = useState<Record<string, ColQty>>({});
@@ -42,12 +70,14 @@ export default function ChapitreDetail() {
   const [onlyMissing, setOnlyMissing] = useState(false);
 
   /* ================= USER ================= */
+
   useEffect(() => {
     const u = (localStorage.getItem("activeUser") as any) || "adrien";
     setUserId(u);
   }, []);
 
   /* ================= CARDS ================= */
+
   useEffect(() => {
     fetch("/api/cards", { cache: "no-store" })
       .then((r) => r.json())
@@ -55,6 +85,7 @@ export default function ChapitreDetail() {
   }, []);
 
   /* ================= COLLECTION ================= */
+
   useEffect(() => {
     fetch(`/api/collection?userId=${userId}`, { cache: "no-store" })
       .then((r) => r.json())
@@ -73,7 +104,12 @@ export default function ChapitreDetail() {
   }, [userId]);
 
   /* ================= SET QTY ================= */
-  async function setQty(cardId: string, variant: "normal" | "foil", value: number) {
+
+  async function setQty(
+    cardId: string,
+    variant: "normal" | "foil",
+    value: number
+  ) {
     const next = Math.max(0, value);
     const prev = col[cardId] ?? { normal: 0, foil: 0 };
 
@@ -95,7 +131,8 @@ export default function ChapitreDetail() {
     }
   }
 
-  /* ================= FILTERS ================= */
+  /* ================= FILTER ================= */
+
   const chapterCards = useMemo(() => {
     const s = q.trim().toLowerCase();
 
@@ -109,8 +146,8 @@ export default function ChapitreDetail() {
       );
   }, [cards, chapterCode, q, onlyMissing, col]);
 
-
   /* ================= RENDER ================= */
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -118,13 +155,19 @@ export default function ChapitreDetail() {
           <div className="sigil">📘</div>
           <div>
             <h1>Chapitre {chapterCode}</h1>
-            <p>{setName} • {chapterCards.length} cartes</p>
+            <p>
+              {chapterName} • {chapterCards.length} cartes
+            </p>
           </div>
         </div>
 
         <div className="controls">
-          <a className="link" href="/chapitres">⬅️ Album</a>
-          <a className="link" href="/">🎴 Cartes</a>
+          <a className="link" href="/chapitres">
+            ⬅️ Album
+          </a>
+          <a className="link" href="/">
+            🎴 Cartes
+          </a>
         </div>
       </header>
 
@@ -148,8 +191,10 @@ export default function ChapitreDetail() {
 
       <section className="grid" style={{ marginTop: 12 }}>
         {chapterCards.map((c) => {
+          const variant = variantByCard[c.id] ?? "normal";
           const normal = col[c.id]?.normal ?? 0;
           const foil = col[c.id]?.foil ?? 0;
+          const current = variant === "normal" ? normal : foil;
           const total = normal + foil;
 
           return (
@@ -157,48 +202,31 @@ export default function ChapitreDetail() {
               <div className="cardMedia">
                 <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
 
-                {/* COMPTEUR MOBILE AVEC VARIANTE */}
-              <div className="qtyPill unified">
-                <button
-                  onClick={() => {
-                    const v = variantByCard[c.id] ?? "normal";
-                    const current = col[c.id]?.[v] ?? 0;
-                    setQty(c.id, v, current - 1);
-                  }}
-                >
-                  −
-                </button>
+                <div className="qtyPill unified">
+                  <button onClick={() => setQty(c.id, variant, current - 1)}>
+                    −
+                  </button>
 
-                <div className="num">
-                  {col[c.id]?.[variantByCard[c.id] ?? "normal"] ?? 0}
+                  <div className="num">{current}</div>
+
+                  <button onClick={() => setQty(c.id, variant, current + 1)}>
+                    +
+                  </button>
+
+                  <button
+                    className={
+                      "variantBtn " + (variant === "foil" ? "active" : "")
+                    }
+                    onClick={() =>
+                      setVariantByCard((p) => ({
+                        ...p,
+                        [c.id]: variant === "normal" ? "foil" : "normal",
+                      }))
+                    }
+                  >
+                    ✨
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => {
-                    const v = variantByCard[c.id] ?? "normal";
-                    const current = col[c.id]?.[v] ?? 0;
-                    setQty(c.id, v, current + 1);
-                  }}
-                >
-                  +
-                </button>
-
-                <button
-                  className={
-                    "variantBtn " +
-                    ((variantByCard[c.id] ?? "normal") === "foil" ? "active" : "")
-                  }
-                  onClick={() =>
-                    setVariantByCard((p: Record<string, "normal" | "foil">) => ({
-                      ...p,
-                      [c.id]: (p[c.id] ?? "normal") === "normal" ? "foil" : "normal",
-                    }))
-                  }
-                  aria-label="Changer variante"
-                >
-                  ✨
-                </button>
-              </div>
 
                 <div className="corner">
                   {total === 0 ? "⬜ 0" : total === 1 ? "✅ OK" : "🎁 Double"}
