@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 
 /* ================= TYPES ================= */
+
+type Props = {
+  params: {
+    code: string;
+  };
+};
 
 type Card = {
   id: string;
@@ -36,19 +41,13 @@ const PLACEHOLDER =
 
 /* ================= PAGE ================= */
 
-export default function ChapitreDetail() {
-  const params = useParams();
+export default function ChapitreDetail({ params }: Props) {
+  const chapterCode = Number(params.code);
 
-  const rawCode = Array.isArray(params.code)
-    ? params.code[0]
-    : params.code;
-
-  const chapterCode = Number(rawCode);
-
-  if (!chapterCode) {
+  if (!chapterCode || Number.isNaN(chapterCode)) {
     return (
       <main className="shell">
-        <p style={{ padding: 20 }}>Chapitre introuvable</p>
+        <h1>Chapitre introuvable</h1>
       </main>
     );
   }
