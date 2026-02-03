@@ -1,16 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 
 /* ================= TYPES ================= */
-
-type Props = {
-  params: {
-    code: string;
-  };
-};
 
 type Card = {
   id: string;
@@ -41,20 +36,22 @@ const PLACEHOLDER =
 
 /* ================= PAGE ================= */
 
-export default function ChapitreDetail({ params }: Props) {
-  const chapterCode = Number(params.code);
+export default function ChapitreDetail() {
+  const params = useParams();
 
-  if (!chapterCode || Number.isNaN(chapterCode)) {
+  const rawCode = Array.isArray(params.code)
+    ? params.code[0]
+    : params.code;
+
+  const chapterCode = Number(rawCode);
+
+  if (!rawCode || Number.isNaN(chapterCode)) {
     return (
       <main className="shell">
-        <h1>Chapitre introuvable</h1>
+        <p style={{ padding: 20 }}>Chapitre introuvable</p>
       </main>
     );
   }
-
-  console.log("PARAMS =", params);
-  console.log("RAW CODE =", rawCode);
-  console.log("CHAPTER =", chapterCode);
 
   const chapterName =
     CHAPTERS_NAMES_FR[String(chapterCode)] ?? `Chapitre ${chapterCode}`;
@@ -161,12 +158,8 @@ export default function ChapitreDetail({ params }: Props) {
         </div>
 
         <div className="controls">
-          <a className="link" href="/chapitres">
-            ⬅️ Album
-          </a>
-          <a className="link" href="/">
-            🎴 Cartes
-          </a>
+          <a className="link" href="/chapitres">⬅️ Album</a>
+          <a className="link" href="/">🎴 Cartes</a>
         </div>
       </header>
 
@@ -202,20 +195,12 @@ export default function ChapitreDetail({ params }: Props) {
                 <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
 
                 <div className="qtyPill unified">
-                  <button onClick={() => setQty(c.id, variant, current - 1)}>
-                    −
-                  </button>
-
+                  <button onClick={() => setQty(c.id, variant, current - 1)}>−</button>
                   <div className="num">{current}</div>
-
-                  <button onClick={() => setQty(c.id, variant, current + 1)}>
-                    +
-                  </button>
+                  <button onClick={() => setQty(c.id, variant, current + 1)}>+</button>
 
                   <button
-                    className={
-                      "variantBtn " + (variant === "foil" ? "active" : "")
-                    }
+                    className={"variantBtn " + (variant === "foil" ? "active" : "")}
                     onClick={() =>
                       setVariantByCard((p) => ({
                         ...p,
