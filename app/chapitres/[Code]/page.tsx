@@ -37,25 +37,25 @@ const PLACEHOLDER =
 /* ================= PAGE ================= */
 
 export default function ChapitreDetail() {
-  const params = useParams<{ code?: string | string[] }>();
+  const params = useParams();
 
-  // 🔐 sécurisation ABSOLUE du code
-  const rawCode =
-    typeof params.code === "string"
-      ? params.code
-      : Array.isArray(params.code)
-      ? params.code[0]
-      : "";
+  const rawCode = Array.isArray(params.code)
+    ? params.code[0]
+    : params.code;
 
   const chapterCode = Number(rawCode);
 
-  if (!Number.isFinite(chapterCode)) {
+  if (!chapterCode) {
     return (
       <main className="shell">
-        <p style={{ padding: 20 }}>❌ Chapitre invalide</p>
+        <p style={{ padding: 20 }}>Chapitre introuvable</p>
       </main>
     );
   }
+
+  console.log("PARAMS =", params);
+  console.log("RAW CODE =", rawCode);
+  console.log("CHAPTER =", chapterCode);
 
   const chapterName =
     CHAPTERS_NAMES_FR[String(chapterCode)] ?? `Chapitre ${chapterCode}`;
