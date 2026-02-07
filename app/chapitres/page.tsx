@@ -21,11 +21,26 @@ type ChapterStats = {
   code: string;
   name: string;
   total: number;
-  owned: number;
+  aOwned: number;
+  gOwned: number;
+  duoOwned: number;
   pct: number;
 };
 
-/* ================= UTILS ================= */
+/* ================= CONST ================= */
+
+const CHAPTER_BACKGROUNDS: Record<string, string> = {
+  "1": "/chapters/1.jpg",
+  "2": "/chapters/2.jpg",
+  "3": "/chapters/3.jpg",
+  "4": "/chapters/4.jpg",
+  "5": "/chapters/5.jpg",
+  "6": "/chapters/6.jpg",
+  "7": "/chapters/7.jpg",
+  "8": "/chapters/8.jpg",
+  "9": "/chapters/9.jpg",
+  "10": "/chapters/10.jpg",
+};
 
 function percent(a: number, b: number) {
   if (!b) return 0;
@@ -36,7 +51,8 @@ function percent(a: number, b: number) {
 
 export default function ChapitresPage() {
   const [cards, setCards] = useState<Card[]>([]);
-  const [collection, setCollection] = useState<Record<string, number>>({});
+  const [aCol, setACol] = useState<Record<string, number>>({});
+  const [gCol, setGCol] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   /* ================= LOAD ================= */
@@ -45,21 +61,30 @@ export default function ChapitresPage() {
     async function load() {
       setLoading(true);
 
-      const [cardsRes, colRes] = await Promise.all([
+      const [cardsR, aR, gR] = await Promise.all([
         fetch("/api/cards", { cache: "no-store" }),
         fetch("/api/collection?userId=adrien", { cache: "no-store" }),
+        fetch("/api/collection?userId=angele", { cache: "no-store" }),
       ]);
 
-      const cardsData = await cardsRes.json();
-      const colData: ColRow[] = await colRes.json();
+      const cardsData: Card[] = await cardsR.json();
+      const aData: ColRow[] = await aR.json();
+      const gData: ColRow[] = await gR.json();
 
-      const colMap: Record<string, number> = {};
-      colData.forEach((r) => {
-        colMap[r.cardId] = (colMap[r.cardId] ?? 0) + r.quantity;
+      const aMap: Record<string, number> = {};
+      const gMap: Record<string, number> = {};
+
+      aData.forEach((r: ColRow) => {
+        aMap[r.cardId] = (aMap[r.cardId] ?? 0) + r.quantity;
       });
 
-      setCards(Array.isArray(cardsData) ? cardsData : []);
-      setCollection(colMap);
+      gData.forEach((r: ColRow) => {
+        gMap[r.cardId] = (gMap[r.cardId] ?? 0) + r.quantity;
+      });
+
+      setCards(cardsData);
+      setACol(aMap);
+      setGCol(gMap);
       setLoading(false);
     }
 
@@ -69,38 +94,44 @@ export default function ChapitresPage() {
   /* ================= STATS ================= */
 
   const chapters: ChapterStats[] = useMemo(() => {
-    const map: Record<string, ChapterStats> = {};
+    const map = new Map<string, ChapterStats>();
 
-    cards.forEach((c) => {
-      if (!c.setCode) return;
-      if (!/^\d+$/.test(c.setCode)) return;
+    cards.forEach((c: Card) => {
+      if (!c.setCode || !/^\d+$/.test(c.setCode)) return;
 
-      if (!map[c.setCode]) {
-        map[c.setCode] = {
+      if (!map.has(c.setCode)) {
+        map.set(c.setCode, {
           code: c.setCode,
           name:
             CHAPTERS_NAMES_FR[c.setCode] ??
             c.setName ??
             `Chapitre ${c.setCode}`,
           total: 0,
-          owned: 0,
+          aOwned: 0,
+          gOwned: 0,
+          duoOwned: 0,
           pct: 0,
-        };
+        });
       }
 
-      map[c.setCode].total += 1;
-      if ((collection[c.id] ?? 0) > 0) {
-        map[c.setCode].owned += 1;
-      }
+      const row = map.get(c.setCode)!;
+      row.total += 1;
+
+      const aHas = (aCol[c.id] ?? 0) > 0;
+      const gHas = (gCol[c.id] ?? 0) > 0;
+
+      if (aHas) row.aOwned += 1;
+      if (gHas) row.gOwned += 1;
+      if (aHas || gHas) row.duoOwned += 1;
     });
 
-    return Object.values(map)
-      .map((c) => ({
-        ...c,
-        pct: percent(c.owned, c.total),
+    return Array.from(map.values())
+      .map((r) => ({
+        ...r,
+        pct: percent(r.duoOwned, r.total),
       }))
       .sort((a, b) => Number(a.code) - Number(b.code));
-  }, [cards, collection]);
+  }, [cards, aCol, gCol]);
 
   /* ================= RENDER ================= */
 
@@ -111,11 +142,7 @@ export default function ChapitresPage() {
           <div className="sigil">📚</div>
           <div>
             <h1>Grimoire des chapitres</h1>
-            <p>
-              {loading
-                ? "⏳ Chargement…"
-                : `${chapters.length} chapitres`}
-            </p>
+            <p>{loading ? "⏳ Chargement…" : `${chapters.length} chapitres`}</p>
           </div>
         </div>
       </header>
@@ -125,7 +152,10 @@ export default function ChapitresPage() {
           <a
             key={ch.code}
             href={`/chapitres/${ch.code}`}
-            className={`chapterCard pct-${Math.floor(ch.pct / 10)}`}
+            className="chapterCard"
+            style={{
+              backgroundImage: `url(${CHAPTER_BACKGROUNDS[ch.code]})`,
+            }}
           >
             <div className="chapterHeader">
               <div>
@@ -144,12 +174,9 @@ export default function ChapitresPage() {
             </div>
 
             <div className="chapterFooter">
-              <span>
-                Possédées : <b>{ch.owned}</b>
-              </span>
-              <span>
-                Total : <b>{ch.total}</b>
-              </span>
+              <span>Adrien : {ch.aOwned}</span>
+              <span>Angèle : {ch.gOwned}</span>
+              <span>Total : {ch.total}</span>
             </div>
           </a>
         ))}
@@ -165,21 +192,37 @@ export default function ChapitresPage() {
         }
 
         .chapterCard {
-          display: block;
+          position: relative;
+          overflow: hidden;
           padding: 18px;
           border-radius: 22px;
-          background: linear-gradient(
-            160deg,
-            rgba(255, 255, 255, 0.1),
-            rgba(255, 255, 255, 0.02)
-          );
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-          backdrop-filter: blur(8px);
+          background-size: cover;
+          background-position: center;
+          border: 1px solid rgba(255,255,255,.25);
+          box-shadow: 0 14px 40px rgba(0,0,0,.6);
           text-decoration: none;
-          color: inherit;
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          color: white;
         }
+
+        /* voile sombre pour la lisibilité */
+        .chapterCard::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(
+            to bottom,
+            rgba(0,0,0,.35),
+            rgba(0,0,0,.8)
+          );
+          z-index: 0;
+        }
+
+        /* contenu au-dessus du voile */
+        .chapterCard > * {
+          position: relative;
+          z-index: 1;
+        }
+
 
         .chapterCard:hover {
           transform: translateY(-6px) scale(1.02);

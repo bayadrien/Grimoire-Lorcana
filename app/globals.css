@@ -1017,3 +1017,69 @@ input.pill{
   font-size: 13px;
   opacity: .9;
 }
+/* ===== USER COMPARISON ===== */
+
+.compareBox {
+  margin-top: 28px;
+  padding: 22px;
+  border-radius: 24px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,.06),
+    rgba(0,0,0,.25)
+  );
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+.compareBox h2 {
+  margin-bottom: 18px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.compareBox .row {
+  display: grid;
+  grid-template-columns: 90px 1fr 70px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.compareBox .label {
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.compareBox .crown {
+  font-size: 16px;
+}
+
+.compareBox .bar {
+  height: 14px;
+  background: rgba(255,255,255,.12);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.15);
+}
+
+.compareBox .fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .6s ease;
+}
+
+.compareBox .fill.adrien {
+  background: linear-gradient(90deg, #6dd5fa, #2980b9);
+}
+
+.compareBox .fill.angele {
+  background: linear-gradient(90deg, #fbc2eb, #a18cd1);
+}
+
+.compareBox .value {
+  font-size: 13px;
+  opacity: 0.85;
+  text-align: right;
+}
