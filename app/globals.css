@@ -26,6 +26,7 @@ body{
 
 /* Layout */
 .shell{
+  padding-top: 90px;
   max-width: 1180px;
   margin: 26px auto;
   padding: 0 16px 26px;
@@ -1082,4 +1083,110 @@ input.pill{
   font-size: 13px;
   opacity: 0.85;
   text-align: right;
+}
+/* ================= MENU BOSS ================= */
+
+.topbar.boss {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.92),
+    rgba(245,245,255,0.85)
+  );
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.searchBox input {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.15);
+  min-width: 240px;
+  font-size: 14px;
+}
+
+.mobileMenu.boss {
+  background: linear-gradient(
+    160deg,
+    #ffffff,
+    #f4f6ff
+  );
+}
+
+.mobileMenu .quickHints {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  opacity: .7;
+}
+
+/* Responsive helpers */
+.hide-mobile { display: none; }
+.show-mobile { display: block; }
+
+@media (min-width: 768px) {
+  .hide-mobile { display: flex; }
+  .show-mobile { display: none; }
+}
+
+.suggestBox {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  margin-top: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  z-index: 50;
+}
+
+.suggestBox button {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.suggestBox button:hover {
+  background: #f2f2f2;
+}
+.activeFilters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 14px 0 18px;
+}
+
+.filterBadge {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+.filterBadge.chapter {
+  background: #e8f1ff;
+  border-color: #aac7ff;
+  color: #2b5cff;
+}
+
+.filterBadge.ink {
+  background: #fff3d6;
+  border-color: #ffd27d;
+  color: #9c6a00;
+}
+
+.filterBadge.query {
+  background: #e9f9f1;
+  border-color: #9ee5c1;
+  color: #1b7f4a;
 }

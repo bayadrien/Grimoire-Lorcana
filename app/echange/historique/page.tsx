@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
+import AppHeader from "app/components/AppHeader";
 
 type Trade = {
   id: string;
@@ -43,21 +44,11 @@ export default function HistoriqueEchange() {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="sigil">🧾</div>
-          <div>
-            <h1>Historique des échanges</h1>
-            <p>{filtered.length} lignes</p>
-          </div>
-        </div>
-
-        <div className="controls">
-          <a className="link" href="/echange">⬅️ Échange</a>
-          <a className="link" href="/">🎴 Cartes</a>
-          <a className="link" href="/chapitres">📚 Chapitres</a>
-        </div>
-      </header>
+      <AppHeader
+        title="Historique"
+        subtitle={`${filtered.length} cartes`}
+        icon="📜"
+      />
 
       <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
         <div className="controls" style={{ gap: 10 }}>

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
+import { useSearch } from "app/components/SearchContext";
+import AppHeader from "app/components/AppHeader";
 
 /* ================== TYPES ================== */
 
@@ -41,11 +43,14 @@ export default function Home() {
   const [cards, setCards] = useState<Card[]>([]);
   const [collection, setCollection] = useState<Record<string, ColQty>>({});
   const [variantByCard, setVariantByCard] = useState<Record<string, "normal" | "foil">>({});
-
   const [q, setQ] = useState("");
   const [onlyMissing, setOnlyMissing] = useState(false);
   const [chapter, setChapter] = useState<"all" | string>("all");
   const [inks, setInks] = useState<Set<string>>(new Set());
+  
+  const { query, activeInk, activeChapter } = useSearch();
+
+
 
   /* ========== USER ========== */
   useEffect(() => {
@@ -108,148 +113,44 @@ export default function Home() {
     }
   }
 
-  /* ========== FILTRES ========== */
+/* ========== FILTRES ========== */
 
-  function toggleInk(ink: string) {
-    setInks((p) => {
-      const n = new Set(p);
-      n.has(ink) ? n.delete(ink) : n.add(ink);
-      return n;
-    });
-  }
+const filtered = useMemo(() => {
+  const q = query.trim().toLowerCase();
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
+  return cards.filter((c) => {
+    /* 🎯 FILTRE CHAPITRE (global, détecté ou cliqué) */
+    if (activeChapter && Number(c.setCode) !== activeChapter) {
+      return false;
+    }
 
-    return cards.filter((c) => {
-      if (s && !c.name.toLowerCase().includes(s)) return false;
+    /* 🎨 FILTRE ENCRE */
+    if (activeInk && c.ink !== activeInk) {
+      return false;
+    }
 
-      const qty = collection[c.id] ?? { normal: 0, foil: 0 };
-      if (onlyMissing && qty.normal + qty.foil > 0) return false;
+    /* 🔍 FILTRE TEXTE (nom de carte) */
+    if (q && !c.name.toLowerCase().includes(q)) {
+      return false;
+    }
 
-      if (chapter !== "all" && String(c.setCode ?? "") !== chapter) return false;
-      if (inks.size && !inks.has(c.ink ?? "")) return false;
+    return true;
+  });
+}, [cards, query, activeInk, activeChapter]);
 
-      return true;
-    });
-  }, [cards, q, onlyMissing, chapter, inks, collection]);
 
-  const chapters = useMemo(() => {
-    const s = new Set<string>();
-    cards.forEach((c) => {
-      if (c.setCode && /^\d+$/.test(c.setCode)) s.add(c.setCode);
-    });
-    return [...s].sort((a, b) => Number(a) - Number(b));
-  }, [cards]);
 
   /* ========== RENDER ========== */
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="sigil">📜</div>
-          <div>
-            <h1>Grimoire Lorcana</h1>
-            <p>{filtered.length} cartes</p>
-          </div>
-        </div>
+      <AppHeader
+        title="Grimoire Lorcana"
+        subtitle={`${filtered.length} cartes`}
+        icon="📜"
+      />
 
-        <div className="controls">
-          {/* Desktop only */}
-          <input
-            className="pill hide-mobile"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="🔎 Rechercher…"
-          />
-
-          <label className="pill hide-mobile">
-            <input
-              type="checkbox"
-              checked={onlyMissing}
-              onChange={(e) => setOnlyMissing(e.target.checked)}
-            />
-            Manquantes
-          </label>
-
-          <select
-            className="hide-mobile"
-            value={userId}
-            onChange={(e) => {
-              const v = e.target.value as "adrien" | "angele";
-              setUserId(v);
-              localStorage.setItem("activeUser", v);
-            }}
-          >
-            <option value="adrien">Adrien</option>
-            <option value="angele">Angèle</option>
-          </select>
-
-          {/* Desktop nav */}
-          <nav className="nav-desktop hide-mobile">
-            <a href="/chapitres">📚 Chapitres</a>
-            <a href="/echange">🤝 Échange</a>
-            <a href="/stats">📊 Stats</a>
-            <a href="/gift">🎁 Doubles</a>
-          </nav>
-
-          {/* Mobile burger */}
-          <button
-            className="burger show-mobile"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Menu"
-          >
-            ☰
-          </button>
-        </div>
-      </header>
-
-      {menuOpen && (
-        <div className="mobileOverlay" onClick={() => setMenuOpen(false)}>
-          <div className="mobileMenu" onClick={(e) => e.stopPropagation()}>
-            <button className="close" onClick={() => setMenuOpen(false)}>
-              ✕
-            </button>
-
-            <input
-              className="pill"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="🔎 Rechercher…"
-            />
-
-            <label className="pill">
-              <input
-                type="checkbox"
-                checked={onlyMissing}
-                onChange={(e) => setOnlyMissing(e.target.checked)}
-              />
-              Manquantes
-            </label>
-
-            <select
-              value={userId}
-              onChange={(e) => {
-                const v = e.target.value as "adrien" | "angele";
-                setUserId(v);
-                localStorage.setItem("activeUser", v);
-                setMenuOpen(false);
-              }}
-            >
-              <option value="adrien">Adrien</option>
-              <option value="angele">Angèle</option>
-            </select>
-
-            <hr />
-
-            <a href="/chapitres">📚 Chapitres</a>
-            <a href="/echange">🤝 Échange</a>
-            <a href="/stats">📊 Stats</a>
-            <a href="/gift">🎁 Doubles</a>
-          </div>
-        </div>
-      )}
+      
 
 
       {/* CARTES */}

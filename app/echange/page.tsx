@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
 import { Toast } from "../components/Toast";
+import AppHeader from "app/components/AppHeader";
 
 type Card = {
   id: string;
@@ -169,23 +170,11 @@ export default function EchangePage() {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="sigil">🤝</div>
-          <div>
-            <h1>Mode échange</h1>
-            <p>Les doubles utiles, prêts à passer de main en main</p>
-          </div>
-        </div>
-
-        <div className="controls">
-          <a className="link" href="/">🎴 Cartes</a>
-          <a className="link" href="/chapitres">📚 Chapitres</a>
-          <a className="link" href="/stats">📊 Stats</a>
-          <a className="link" href="/gift">🎁 Doubles</a>
-          <a className="link" href="/echange/historique">🧾 Historique</a>
-        </div>
-      </header>
+      <AppHeader
+        title="Mode Echange"
+        subtitle="Qui Donne Quoi"
+        icon="📜"
+      />
 
       <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
         <div className="controls" style={{ gap: 10, flexWrap: "wrap" }}>

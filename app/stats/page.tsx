@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 import { tInk } from "@/lib/lorcana-fr";
+import AppHeader from "app/components/AppHeader";
 
 /* ============================================================
    TYPES
@@ -54,6 +55,7 @@ export default function StatsPage() {
   const [aCol, setACol] = useState<Record<string, number>>({});
   const [gCol, setGCol] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   /* ================= LOAD ================= */
 
@@ -162,20 +164,11 @@ export default function StatsPage() {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="sigil">📊</div>
-          <div>
-            <h1>Tableau de Commandement</h1>
-            <p>
-              {loading
-                ? "⏳ Chargement des données"
-                : `${global.duo} / ${global.total} cartes en duo`}
-            </p>
-          </div>
-        </div>
-      </header>
-
+      <AppHeader
+        title="Statistiques"
+        subtitle="Adrien VS Angèle"
+        icon="📜"
+      />
       {/* ================= GLOBAL ================= */}
 
       <section className="global">
@@ -378,7 +371,7 @@ export default function StatsPage() {
 
       <style jsx>{`
         .global {
-          display: grid;
+          display: grid;zz
           grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
           gap: 16px;
           margin: 20px 0;

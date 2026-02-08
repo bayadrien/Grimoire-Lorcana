@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { tInk, tRarity } from "@/lib/lorcana-fr";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
+import { useSearch } from "app/components/SearchContext";
+import AppHeader from "app/components/AppHeader";
 
 /* ================= TYPES ================= */
 
@@ -40,6 +42,7 @@ export default function ChapitreDetail() {
   const params = useParams();
   const rawCode = params?.code;
   const chapterCode = Number(rawCode);
+  const { query } = useSearch();
 
   if (!chapterCode || Number.isNaN(chapterCode)) {
     return (
@@ -124,7 +127,7 @@ export default function ChapitreDetail() {
   /* ================= FILTER ================= */
 
   const chapterCards = useMemo(() => {
-    const s = q.trim().toLowerCase();
+    const s = query.trim().toLowerCase();
 
     return cards
       .filter((c) => Number(c.setCode) === chapterCode)

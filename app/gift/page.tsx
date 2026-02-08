@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import AppHeader from "app/components/AppHeader";
 
 type Card = { id: string; name: string; setName: string; setCode?: string | null; ink?: string | null };
 type ColRow = { cardId: string; quantity: number };
@@ -47,33 +48,11 @@ export default function Gift() {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="sigil">🎁</div>
-          <div>
-            <h1>Doubles à donner</h1>
-            <p>{giftables.length} cartes que {me} peut donner à {other}</p>
-          </div>
-        </div>
-
-        <div className="controls">
-          <select
-            value={me}
-            onChange={(e) => {
-              const v = e.target.value as "adrien" | "angele";
-              setMe(v);
-              localStorage.setItem("activeUser", v);
-            }}
-          >
-            <option value="adrien">Adrien</option>
-            <option value="angele">Angèle</option>
-          </select>
-
-          <a className="link" href="/">📚 Catalogue</a>
-          <a className="link" href="/stats">📊 Stats</a>
-
-        </div>
-      </header>
+      <AppHeader
+        title="Doubles"
+        subtitle="A donner"
+        icon="📜"
+      />
 
       {giftables.length === 0 ? (
         <div className="note">Rien à donner pour l’instant 😄</div>

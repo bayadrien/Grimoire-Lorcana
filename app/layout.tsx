@@ -1,15 +1,23 @@
-import type { Metadata } from "next";
 import "./globals.css";
+import { SearchProvider } from "@/app/components/SearchContext";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Grimoire Lorcana",
-  description: "Catalogue + collections Adrien / Angèle",
+  description: "Collection Lorcana",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        <SearchProvider>
+          {children}
+        </SearchProvider>
+      </body>
     </html>
   );
 }

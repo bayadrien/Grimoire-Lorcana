@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
+import AppHeader from "app/components/AppHeader";
 
 /* ================= TYPES ================= */
 
@@ -137,15 +138,11 @@ export default function ChapitresPage() {
 
   return (
     <main className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <div className="sigil">📚</div>
-          <div>
-            <h1>Grimoire des chapitres</h1>
-            <p>{loading ? "⏳ Chargement…" : `${chapters.length} chapitres`}</p>
-          </div>
-        </div>
-      </header>
+            <AppHeader
+              title="Grimoire Lorcana"
+              subtitle={`10 chapitres`}
+              icon="📜"
+            />
 
       <section className="chaptersGrid">
         {chapters.map((ch) => (
