@@ -149,9 +149,12 @@ const filtered = useMemo(() => {
         subtitle={`${filtered.length} cartes`}
         icon="📜"
       />
-
-      
-
+      {query && (
+        <div className="activeFilter">
+          🎯 Résultats filtrés par <b>{query}</b>
+          <button onClick={() => setQ("")}>✕</button>
+        </div>
+      )}
 
       {/* CARTES */}
       <section className="grid">
@@ -167,7 +170,18 @@ const filtered = useMemo(() => {
           const total = qtys.normal + qtys.foil;
 
           return (
-            <article key={c.id} className="card">
+            <article
+              key={c.id}
+              className={[
+                "card",
+                total === 0 && "missing",
+                total === 1 && "owned",
+                total > 1 && "double",
+                activeVariant === "foil" && "foil",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <div className="cardMedia">
                 <img src={c.imageUrl || PLACEHOLDER} alt={c.name} loading="lazy" />
 

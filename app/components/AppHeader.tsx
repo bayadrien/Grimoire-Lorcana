@@ -36,6 +36,15 @@ export default function AppHeader({
 
   // 💡 suggestions live
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  
+  const [activeUser, setActiveUser] = useState<"adrien" | "angele">("adrien");
+
+  useEffect(() => {
+    const u =
+      (localStorage.getItem("activeUser") as "adrien" | "angele") || "adrien";
+    setActiveUser(u);
+  }, []);
+
 
   /* ================= SUGGESTIONS LIVE ================= */
   useEffect(() => {
@@ -71,6 +80,12 @@ export default function AppHeader({
 
     setSuggestions(matches.slice(0, 6));
   }, [query]);
+
+  function changeUser(u: "adrien" | "angele") {
+    setActiveUser(u);
+    localStorage.setItem("activeUser", u);
+    window.location.reload();
+  }
 
   /* ================= RECHERCHE INTELLIGENTE ================= */
   function submitSearch(value?: string) {
@@ -147,6 +162,16 @@ export default function AppHeader({
           )}
         </div>
 
+      <div className="userSwitch hide-mobile">
+        <select
+          value={activeUser}
+          onChange={(e) => changeUser(e.target.value as "adrien" | "angele")}
+        >
+          <option value="adrien">Adrien</option>
+          <option value="angele">Angèle</option>
+        </select>
+      </div>
+
         {/* 🖥️ MENU DESKTOP */}
         <nav className="nav-desktop hide-mobile">
           <Link href="/">🎴 Cartes</Link>
@@ -198,6 +223,17 @@ export default function AppHeader({
               <span>Ariel</span>
               <span>amber</span>
               <span>chapitre 3</span>
+            </div>
+
+            <div className="mobileUserSwitch">
+              <label>Collection</label>
+              <select
+                value={activeUser}
+                onChange={(e) => changeUser(e.target.value as "adrien" | "angele")}
+              >
+                <option value="adrien">Adrien</option>
+                <option value="angele">Angèle</option>
+              </select>
             </div>
 
             <hr />

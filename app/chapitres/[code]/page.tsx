@@ -180,6 +180,13 @@ export default function ChapitreDetail() {
         </label>
       </div>
 
+      {query && (
+        <div className="activeFilter">
+          🎯 Résultats filtrés par <b>{query}</b>
+          <button onClick={() => setQ("")}>✕</button>
+        </div>
+      )}
+
       <section className="grid" style={{ marginTop: 12 }}>
         {chapterCards.map((c) => {
           const variant = variantByCard[c.id] ?? "normal";
@@ -188,7 +195,18 @@ export default function ChapitreDetail() {
           const total = qtys.normal + qtys.foil;
 
           return (
-            <article key={c.id} className="card">
+            <article
+              key={c.id}
+              className={[
+                "card",
+                total === 0 && "missing",
+                total === 1 && "owned",
+                total > 1 && "double",
+                variant === "foil" && "foil",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <div className="cardMedia">
                 <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
 

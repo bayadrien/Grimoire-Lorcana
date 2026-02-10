@@ -1190,3 +1190,139 @@ input.pill{
   border-color: #9ee5c1;
   color: #1b7f4a;
 }
+
+/* ===================== CARTES – ÉTATS ===================== */
+
+.card {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.card:hover {
+  transform: translateY(-6px) scale(1.02);
+}
+
+/* 🟥 CARTE MANQUANTE */
+.card.missing {
+  filter: grayscale(0.9) brightness(0.9);
+  border: 2px dashed rgba(0,0,0,.15);
+  opacity: 0.85;
+}
+
+/* 🟩 CARTE POSSÉDÉE */
+.card.owned {
+  box-shadow: 0 0 0 2px rgba(0,0,0,.05),
+              0 8px 25px rgba(0,0,0,.15);
+}
+
+/* 🎁 DOUBLE */
+.card.double::after {
+  content: "🎁";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 20px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px;
+  box-shadow: 0 6px 15px rgba(0,0,0,.25);
+  animation: pulse 1.6s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* ✨ FOIL EFFECT */
+.card.foil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(255,255,255,.35) 50%,
+    transparent 70%
+  );
+  opacity: 0.6;
+  transform: translateX(-100%);
+  animation: foilSweep 3.5s infinite;
+  pointer-events: none;
+}
+
+@keyframes foilSweep {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+
+.card.foil {
+  position: relative;
+  box-shadow:
+    0 0 0 rgba(255,255,255,0),
+    0 0 25px rgba(140, 200, 255, 0.35);
+  animation: foilGlow 2.8s ease-in-out infinite;
+}
+
+@keyframes foilGlow {
+  0% {
+    box-shadow:
+      0 0 18px rgba(140, 200, 255, 0.35),
+      0 0 40px rgba(180, 140, 255, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 26px rgba(255, 200, 160, 0.45),
+      0 0 55px rgba(140, 255, 200, 0.35);
+  }
+  100% {
+    box-shadow:
+      0 0 18px rgba(140, 200, 255, 0.35),
+      0 0 40px rgba(180, 140, 255, 0.25);
+  }
+}
+
+.card.foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 30%,
+    rgba(255,255,255,0.35),
+    transparent 70%
+  );
+  opacity: 0.25;
+  animation: foilShine 3.5s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes foilShine {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+.userSwitch select {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(0,0,0,0.15);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mobileUserSwitch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.mobileUserSwitch label {
+  font-size: 12px;
+  opacity: 0.7;
+}
