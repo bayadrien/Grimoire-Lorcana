@@ -40,7 +40,9 @@ const PLACEHOLDER =
 
 export default function ChapitreDetail() {
   const params = useParams();
-  const rawCode = params?.code;
+  const rawCode = Array.isArray(params?.code)
+    ? params?.code[0]
+    : params?.code;
   const chapterCode = Number(rawCode);
   const { query } = useSearch();
 
@@ -58,6 +60,7 @@ export default function ChapitreDetail() {
   const [userId, setUserId] = useState<"adrien" | "angele">("adrien");
   const [cards, setCards] = useState<Card[]>([]);
   const [collection, setCollection] = useState<Record<string, ColQty>>({});
+  const [otherCollection, setOtherCollection] = useState<Record<string, ColQty>>({});
   const [variantByCard, setVariantByCard] = useState<
     Record<string, "normal" | "foil">
   >({});
@@ -82,19 +85,37 @@ export default function ChapitreDetail() {
   /* ================= COLLECTION ================= */
 
   useEffect(() => {
-    fetch(`/api/collection?userId=${userId}`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((rows: ColRow[]) => {
-        const map: Record<string, ColQty> = {};
-        rows.forEach((r) => {
-          if (!map[r.cardId]) {
-            map[r.cardId] = { normal: 0, foil: 0 };
-          }
-          map[r.cardId][r.variant] = r.quantity;
-        });
-        setCollection(map);
+    async function loadCollections() {
+      const otherUser = userId === "adrien" ? "angele" : "adrien";
+
+      const [mineR, otherR] = await Promise.all([
+        fetch(`/api/collection?userId=${userId}`, { cache: "no-store" }),
+        fetch(`/api/collection?userId=${otherUser}`, { cache: "no-store" }),
+      ]);
+
+      const mineRows: ColRow[] = await mineR.json();
+      const otherRows: ColRow[] = await otherR.json();
+
+      const mineMap: Record<string, ColQty> = {};
+      const otherMap: Record<string, ColQty> = {};
+
+      mineRows.forEach((r) => {
+        if (!mineMap[r.cardId]) mineMap[r.cardId] = { normal: 0, foil: 0 };
+        mineMap[r.cardId][r.variant] = r.quantity;
       });
+
+      otherRows.forEach((r) => {
+        if (!otherMap[r.cardId]) otherMap[r.cardId] = { normal: 0, foil: 0 };
+        otherMap[r.cardId][r.variant] = r.quantity;
+      });
+
+      setCollection(mineMap);
+      setOtherCollection(otherMap);
+    }
+
+    loadCollections();
   }, [userId]);
+
 
   /* ================= SET QTY ================= */
 
@@ -129,17 +150,27 @@ export default function ChapitreDetail() {
   const chapterCards = useMemo(() => {
     const s = query.trim().toLowerCase();
 
-    return cards
+    const filtered = cards
       .filter((c) => Number(c.setCode) === chapterCode)
       .filter((c) => (s ? c.name.toLowerCase().includes(s) : true))
       .filter((c) =>
         onlyMissing
-          ? (collection[c.id]?.normal ?? 0) +
-              (collection[c.id]?.foil ?? 0) ===
-            0
+          ? (collection[c.id]?.normal ?? 0) + (collection[c.id]?.foil ?? 0) === 0
           : true
       );
+
+    // 🔥 Tri intelligent : possédées en haut
+    return filtered.sort((a, b) => {
+      const aOwned =
+        (collection[a.id]?.normal ?? 0) + (collection[a.id]?.foil ?? 0) > 0;
+      const bOwned =
+        (collection[b.id]?.normal ?? 0) + (collection[b.id]?.foil ?? 0) > 0;
+
+      if (aOwned === bOwned) return 0;
+      return aOwned ? -1 : 1;
+    });
   }, [cards, chapterCode, q, onlyMissing, collection]);
+
 
   /* ================= RENDER ================= */
 
@@ -188,67 +219,97 @@ export default function ChapitreDetail() {
       )}
 
       <section className="grid" style={{ marginTop: 12 }}>
-        {chapterCards.map((c) => {
-          const variant = variantByCard[c.id] ?? "normal";
+        {chapterCards.map((c, index) => {
           const qtys = collection[c.id] ?? { normal: 0, foil: 0 };
-          const current = qtys[variant];
           const total = qtys.normal + qtys.foil;
 
+          const previous =
+            index > 0
+              ? (() => {
+                  const prev = collection[chapterCards[index - 1].id] ?? {
+                    normal: 0,
+                    foil: 0,
+                  };
+                  return prev.normal + prev.foil;
+                })()
+              : null;
+
+          const showSeparator =
+            previous !== null && previous > 0 && total === 0;
+
+          const variant = variantByCard[c.id] ?? "normal";
+          const current = qtys[variant];
+          const otherQty = otherCollection[c.id] ?? { normal: 0, foil: 0 };
+          const otherTotal = otherQty.normal + otherQty.foil;
+          const otherHas = otherTotal > 0;
+
           return (
-            <article
-              key={c.id}
-              className={[
-                "card",
-                total === 0 && "missing",
-                total === 1 && "owned",
-                total > 1 && "double",
-                variant === "foil" && "foil",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <div className="cardMedia">
-                <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
-
-                <div className="qtyPill unified">
-                  <button onClick={() => setQty(c.id, variant, current - 1)}>
-                    −
-                  </button>
-
-                  <div className="num">{current}</div>
-
-                  <button onClick={() => setQty(c.id, variant, current + 1)}>
-                    +
-                  </button>
-
-                  <button
-                    className={
-                      "variantBtn " + (variant === "foil" ? "active" : "")
-                    }
-                    onClick={() =>
-                      setVariantByCard((p) => ({
-                        ...p,
-                        [c.id]: variant === "normal" ? "foil" : "normal",
-                      }))
-                    }
-                  >
-                    ✨
-                  </button>
+            <div key={c.id}>
+              {showSeparator && (
+                <div className="chapterSeparator">
+                  ⚪ Cartes manquantes
                 </div>
+              )}
 
-                <div className="corner">
-                  {total === 0 ? "⬜ 0" : total === 1 ? "✅ OK" : "🎁 Double"}
-                </div>
+              <article
+                className={[
+                  "card",
+                  total === 0 && "missing",
+                  total === 1 && "owned",
+                  total > 1 && "double",
+                  variant === "foil" && "foil",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <div className="cardMedia">
+                  
+                  <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
 
-                <div className="overlay">
-                  <div className="ovTitle">{c.name}</div>
-                  <div className="ovMeta">
-                    {tInk(c.ink)} • {tRarity(c.rarity)} • Coût{" "}
-                    {c.cost ?? "—"}
+                  <div className="qtyPill unified">
+                    <button onClick={() => setQty(c.id, variant, current - 1)}>
+                      −
+                    </button>
+
+                    <div className="num">{current}</div>
+
+                    <button onClick={() => setQty(c.id, variant, current + 1)}>
+                      +
+                    </button>
+
+                    <button
+                      className={
+                        "variantBtn " + (variant === "foil" ? "active" : "")
+                      }
+                      onClick={() =>
+                        setVariantByCard((p) => ({
+                          ...p,
+                          [c.id]: variant === "normal" ? "foil" : "normal",
+                        }))
+                      }
+                    >
+                      ✨
+                    </button>
+                  </div>
+
+                  <div className="corner">
+                    {total === 0 ? "⬜ 0" : total === 1 ? "✅ OK" : "🎁 Double"}
+                  </div>
+
+                  <div className="overlay">
+                    <div className="ovTitle">{c.name}</div>
+                    <div className="ovMeta">
+                      {tInk(c.ink)} • {tRarity(c.rarity)} • Coût{" "}
+                      {c.cost ?? "—"}
+                    </div>
+                  </div>
+
+                  <div className="otherBadge">
+                    {otherHas ? "👀" : "🚫"}
                   </div>
                 </div>
-              </div>
-            </article>
+              </article>
+            </div>
           );
         })}
       </section>
