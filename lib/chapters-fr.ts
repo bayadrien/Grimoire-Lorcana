@@ -8,5 +8,6 @@ export const CHAPTERS_NAMES_FR: Record<string, string> = {
   "7": "L’Île d’Archazia",
   "8": "Le Règne de Jafar",
   "9": "Fabuleux",
-  "10": "Lueurs dans les Profondeurs" ,
+  "10": "Lueurs dans les Profondeurs",
+  "11": "Givresort",
 };

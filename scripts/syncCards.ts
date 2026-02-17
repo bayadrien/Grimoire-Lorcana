@@ -37,7 +37,7 @@ async function main() {
   const chapterSets = sets
     .filter((s) => /^\d+$/.test(s.code))
     .map((s) => ({ ...s, codeNum: Number(s.code) }))
-    .filter((s) => s.codeNum >= 1 && s.codeNum <= 10)
+    .filter((s) => s.codeNum >= 1)
     .sort((a, b) => a.codeNum - b.codeNum);
 
   console.log(`📦 Sets chapitres trouvés: ${chapterSets.map((s) => s.code).join(", ")}`);
