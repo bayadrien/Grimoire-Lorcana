@@ -18,6 +18,7 @@ type Card = {
   rarity?: string | null;
   cost?: number | null;
   imageUrl?: string | null;
+  collectionNumber?: string | null;
 };
 
 type ColRow = {
@@ -148,28 +149,60 @@ export default function ChapitreDetail() {
   /* ================= FILTER ================= */
 
   const chapterCards = useMemo(() => {
-    const s = query.trim().toLowerCase();
+    const search = (q || query || "").trim().toLowerCase();
 
     const filtered = cards
       .filter((c) => Number(c.setCode) === chapterCode)
-      .filter((c) => (s ? c.name.toLowerCase().includes(s) : true))
+      .filter((c) => {
+        if (!search) return true;
+
+        const nameMatch = c.name.toLowerCase().includes(search);
+
+        const numberMatch =
+          c.collectorNumber?.toLowerCase().includes(search) ||
+          c.number?.toLowerCase().includes(search);
+
+        const costMatch =
+          c.cost !== null && String(c.cost).includes(search);
+
+        const inkMatch =
+          c.ink?.toLowerCase().includes(search);
+
+        const rarityMatch =
+          c.rarity?.toLowerCase().includes(search);
+
+        return (
+          nameMatch ||
+          numberMatch ||
+          costMatch ||
+          inkMatch ||
+          rarityMatch
+        );
+      })
       .filter((c) =>
         onlyMissing
-          ? (collection[c.id]?.normal ?? 0) + (collection[c.id]?.foil ?? 0) === 0
+          ? (collection[c.id]?.normal ?? 0) +
+              (collection[c.id]?.foil ?? 0) === 0
           : true
       );
 
-    // 🔥 Tri intelligent : possédées en haut
     return filtered.sort((a, b) => {
       const aOwned =
-        (collection[a.id]?.normal ?? 0) + (collection[a.id]?.foil ?? 0) > 0;
+        (collection[a.id]?.normal ?? 0) +
+          (collection[a.id]?.foil ?? 0) >
+        0;
       const bOwned =
-        (collection[b.id]?.normal ?? 0) + (collection[b.id]?.foil ?? 0) > 0;
+        (collection[b.id]?.normal ?? 0) +
+          (collection[b.id]?.foil ?? 0) >
+        0;
 
       if (aOwned === bOwned) return 0;
       return aOwned ? -1 : 1;
     });
-  }, [cards, chapterCode, q, onlyMissing, collection]);
+  }, [cards, chapterCode, q, query, onlyMissing, collection]);
+
+
+
 
 
   /* ================= RENDER ================= */
