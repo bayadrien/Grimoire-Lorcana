@@ -18,7 +18,7 @@ type Card = {
   rarity?: string | null;
   cost?: number | null;
   imageUrl?: string | null;
-  collectionNumber?: string | null;
+  collection_number?: string | null;
 };
 
 type ColRow = {
@@ -80,9 +80,12 @@ export default function ChapitreDetail() {
   useEffect(() => {
     fetch("/api/cards", { cache: "no-store" })
       .then((r) => r.json())
-      .then((data) => setCards(Array.isArray(data) ? data : []));
+      .then((data) => {
+        console.log("CARD =", data[0]); // 👈 juste ça en plus
+        setCards(Array.isArray(data) ? data : []);
+      });
   }, []);
-
+  
   /* ================= COLLECTION ================= */
 
   useEffect(() => {
@@ -159,8 +162,7 @@ export default function ChapitreDetail() {
         const nameMatch = c.name.toLowerCase().includes(search);
 
         const numberMatch =
-          c.collectorNumber?.toLowerCase().includes(search) ||
-          c.number?.toLowerCase().includes(search);
+          c.collection_number?.toLowerCase().includes(search);
 
         const costMatch =
           c.cost !== null && String(c.cost).includes(search);
@@ -185,6 +187,9 @@ export default function ChapitreDetail() {
               (collection[c.id]?.foil ?? 0) === 0
           : true
       );
+
+console.log("SEARCH =", search);
+console.log("CARD SAMPLE =", cards[0]);
 
     return filtered.sort((a, b) => {
       const aOwned =

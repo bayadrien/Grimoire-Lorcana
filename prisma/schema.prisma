@@ -34,6 +34,7 @@ model Card {
   text      String?
   imageUrl  String?
   updatedAt DateTime @updatedAt
+  collection_number String? @map("collection_number")
 
   collections Collection[]
   trades      Trade[]
