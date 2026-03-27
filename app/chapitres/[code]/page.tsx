@@ -12,6 +12,7 @@ import AppHeader from "app/components/AppHeader";
 type Card = {
   id: string;
   name: string;
+  name_fr: string;
   setName: string;
   setCode?: string | null;
   ink?: string | null;

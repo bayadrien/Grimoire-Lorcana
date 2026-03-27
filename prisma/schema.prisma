@@ -22,6 +22,7 @@ model User {
 model Card {
   id        String   @id
   name      String
+  name_fr   String?
   setName   String
   setCode   String?
   ink       String?
@@ -34,6 +35,7 @@ model Card {
   text      String?
   imageUrl  String?
   updatedAt DateTime @updatedAt
+  boosterCards BoosterCard[]
   collection_number String? @map("collection_number")
 
   collections Collection[]
@@ -65,4 +67,25 @@ model Trade {
   @@index([fromUser, toUser])
   @@index([cardId])
   @@index([createdAt])
+}
+
+model BoosterOpening {
+  id           String   @id @default(uuid())
+  userId       String
+  chapter      Int
+  boosterImage String
+  totalValue   Float
+  createdAt    DateTime @default(now())
+
+  cards BoosterCard[]
+}
+
+model BoosterCard {
+  id        String @id @default(uuid())
+  openingId String
+  cardId    String
+  foil      Boolean @default(false)
+
+  opening BoosterOpening @relation(fields: [openingId], references: [id])
+  card    Card @relation(fields: [cardId], references: [id])
 }

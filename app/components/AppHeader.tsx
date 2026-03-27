@@ -178,8 +178,7 @@ export default function AppHeader({
           <Link href="/chapitres">📚 Chapitres</Link>
           <Link href="/stats">📊 Stats</Link>
           <Link href="/echange">🤝 Échange</Link>
-          <Link href="/gift">🎁 Doubles</Link>
-          <Link href="/echange/historique">📜 Historique</Link>
+          <Link href="/opening">💲 Opening</Link>
         </nav>
 
         {/* 📱 BURGER */}
@@ -250,14 +249,8 @@ export default function AppHeader({
             <Link href="/echange" onClick={() => setMenuOpen(false)}>
               🤝 Échange
             </Link>
-            <Link href="/gift" onClick={() => setMenuOpen(false)}>
-              🎁 Doubles
-            </Link>
-            <Link
-              href="/echange/historique"
-              onClick={() => setMenuOpen(false)}
-            >
-              📜 Historique
+            <Link href="/opening" onClick={() => setMenuOpen(false)}>
+              💲 Opening
             </Link>
           </div>
         </div>
