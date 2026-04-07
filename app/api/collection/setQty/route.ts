@@ -27,60 +27,24 @@ export async function POST(req: Request) {
   const q = Math.max(0, quantity);
 
   // 🔍 Cherche la ligne existante
-  const existing = await prisma.collection.findFirst({
-    where: {
+  await prisma.collection.upsert({
+  where: {
+    userId_cardId_variant: {
       userId,
       cardId,
       variant,
     },
-  });
-
-  // 🗑️ Quantité = 0 → supprimer UNIQUEMENT cette variante
-  if (q === 0) {
-    if (existing) {
-      await prisma.collection.delete({
-        where: {
-          userId_cardId_variant: {
-            userId,
-            cardId,
-            variant,
-          },
-        },
-      });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      cardId,
-      variant,
-      quantity: 0,
-    });
-  }
-
-  // ✏️ Update ou Create
-  if (existing) {
-    await prisma.collection.update({
-      where: {
-        userId_cardId_variant: {
-          userId,
-          cardId,
-          variant,
-        },
-      },
-      data: {
-        quantity: q,
-      },
-    });
-  } else {
-    await prisma.collection.create({
-      data: {
-        userId,
-        cardId,
-        variant,
-        quantity: q,
-      },
-    });
-  }
+  },
+  update: {
+    quantity: q,
+  },
+  create: {
+    userId,
+    cardId,
+    variant,
+    quantity: q,
+  },
+});
 
   return NextResponse.json({
     ok: true,

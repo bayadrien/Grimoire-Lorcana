@@ -11,6 +11,9 @@ export default function OpeningResultContent() {
   const [opening, setOpening] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
 
+  const toEuro = (usd?: number) =>
+    usd ? usd * 0.92 : 0;
+
   useEffect(() => {
     if (!id) return;
 
@@ -20,273 +23,330 @@ export default function OpeningResultContent() {
 
     fetch(`/api/booster/history`)
       .then((r) => r.json())
-      .then((data) => {
-        setHistory(Array.isArray(data) ? data : []);
-      });
+      .then(setHistory);
   }, [id]);
 
   if (!opening) return <div style={{ padding: 20 }}>Chargement...</div>;
 
-  const newCards = opening.cards.filter((c: any) => !c.alreadyOwned);
-  const duplicates = opening.cards.filter((c: any) => c.alreadyOwned);
+  // 🧠 enrichissement cartes
+  const cards = opening.cards.map((c: any) => {
+    const price = c.foil ? toEuro(c.card.usd_foil) : toEuro(c.card.usd);
+
+    return {
+      ...c,
+      value: price,
+      isNew: !c.alreadyOwned,
+      isUseful: c.alreadyOwned && !c.otherOwned,
+    };
+  });
+
+  const newCards = cards.filter((c: any) => c.isNew);
+  const duplicates = cards.filter((c: any) => !c.isNew);
+
+  const useful = cards.filter((c: any) => c.isUseful);
+  const useless = cards.filter((c: any) => c.alreadyOwned && c.otherOwned);
+
+  const totalValue = cards.reduce((sum: number, c: any) => sum + c.value, 0);
 
   return (
     <main className="shell">
       <AppHeader title="Résultat" icon="🎉" />
+
+      {/* HEADER BOOSTER */}
+<div className="headerBox">
+
+  {/* GAUCHE = identité booster */}
+  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+     <img src={opening.boosterImage} style={{ width: 80, borderRadius: 12 }} />
+
+    <div>
+      <div style={{ fontWeight: 600 }}>
+        Booster #{opening.id.slice(0, 6)}
+      </div>
+
+      <div>
+        Chapitre {opening.chapter}
+      </div>
+    </div>
+  </div>
+
+  {/* CENTRE = valeur */}
+  <div style={{ textAlign: "center" }}>
+    <div style={{ fontSize: 12 }}>Valeur</div>
+    <div style={{ fontWeight: "bold", fontSize: 18 }}>
+      💰 {totalValue.toFixed(2)}€
+    </div>
+  </div>
+
+  {/* DROITE = stats */}
+  <div style={{ display: "flex", gap: 12 }}>
+    <div>🆕 {newCards.length}</div>
+    <div>🎁 {useful.length}</div>
+    <div>🔁 {useless.length}</div>
+  </div>
+
+</div>
 
       <div className="layout">
 
         {/* LEFT */}
         <div className="left">
 
-          <h2>✨ Nouvelles cartes</h2>
-          <div className="cardsRow">
-            {newCards.map((c: any, i: number) => (
+          <h2>✨ Cartes</h2>
+
+          <div className="cardsGrid">
+            {cards.map((c: any, i: number) => (
               <Card key={i} c={c} />
             ))}
           </div>
 
-          <h2>🔁 Doublons</h2>
-          <div className="cardsRow">
-            {duplicates.map((c: any, i: number) => (
-              <Card key={i} c={c} />
-            ))}
-          </div>
-
-          <div className="stats">
-            🆕 {newCards.length} | 🔁 {duplicates.length} | 💰{" "}
-            {opening.totalValue.toFixed(2)}€
-          </div>
         </div>
 
         {/* RIGHT */}
         <div className="right">
 
-          <div className="panels">
+          {/* HISTORIQUE */}
+          <div className="panel">
+            <h3>📜 Historique</h3>
 
-            {/* HISTORIQUE */}
-            <div className="panel">
-              <h3>📜 Historique</h3>
+            <div className="list">
+              {history.map((b, i) => {
+                console.log(b.cards);
+                const value = (b.cards || []).reduce((sum: number, c: any) => {
+                  const v = c.foil
+                    ? toEuro(c.card?.usd_foil ?? c.usd_foil)
+                    : toEuro(c.card?.usd ?? c.usd);
+                  return sum + v;
+                }, 0);
 
-              <div className="list">
-                {history.map((b, i) => {
+                const name = b.userId === "adrien" ? "Adrien" : "Angèle";
+
+                return (
+                <div key={i} className="item">
+                  <img src={b.boosterImage} />
+
+                  <div className="info">
+                    <div>
+                      <strong>{name}</strong>
+                    </div>
+
+                    <div>
+                      {new Date(b.createdAt).toLocaleDateString()}
+                    </div>
+
+                    <div>
+                      💰 {value.toFixed(2)}€
+                    </div>
+                  </div>
+                </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* CLASSEMENT */}
+          <div className="panel">
+            <h3>🏆 Classement</h3>
+
+            <div className="list">
+              {[...history]
+                .map((b) => {
+                  const value = (b.cards || []).reduce((sum: number, c: any) => {
+                    const v = c.foil
+                      ? toEuro(c.card?.usd_foil ?? c.usd_foil)
+                      : toEuro(c.card?.usd ?? c.usd);
+                    return sum + v;
+                  }, 0);
+
+                  return { ...b, computedValue: value };
+                })
+                .sort((a, b) => b.computedValue - a.computedValue)
+                .slice(0, 5)
+                .map((b, i) => {
+                  console.log(b.cards);
                   const name = b.userId === "adrien" ? "Adrien" : "Angèle";
 
                   return (
                     <div key={i} className="item">
+                      <div className="rank">#{i + 1}</div>
+
                       <img src={b.boosterImage} />
 
                       <div className="info">
-                        <div className="top">
-                          <span className="user">{name}</span>
-                          <span>
-                            {new Date(b.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
+                        <div><strong>{name}</strong></div>
 
-                        <div className={`value ${b.totalValue > 5 ? "good" : ""}`}>
-                          💰 {b.totalValue.toFixed(2)}€
+                        <div>
+                          💰 {b.computedValue.toFixed(2)}€
                         </div>
                       </div>
+
                     </div>
                   );
                 })}
-              </div>
             </div>
-
-            {/* CLASSEMENT */}
-            <div className="panel">
-              <h3>🏆 Classement</h3>
-
-              <div className="list">
-                {[...history]
-                  .sort((a, b) => b.totalValue - a.totalValue)
-                  .slice(0, 5)
-                  .map((b, i) => {
-                    const name = b.userId === "adrien" ? "Adrien" : "Angèle";
-
-                    return (
-                      <div key={i} className="item">
-                        <span className="rank">#{i + 1}</span>
-
-                        <img src={b.boosterImage} />
-
-                        <div className="info">
-                          <div className="user">{name}</div>
-
-                          <div className={`value ${b.totalValue > 5 ? "good" : ""}`}>
-                            💰 {b.totalValue.toFixed(2)}€
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-
           </div>
 
         </div>
       </div>
 
-<style jsx>{`
-/* ===== LAYOUT ===== */
-.layout {
-  display: grid;
-  grid-template-columns: 3fr 1.2fr;
-  gap: 20px;
-  margin-top: 20px;
-  align-items: start;
-}
+<style jsx global>{`
 
-/* ===== LEFT (CARTES) ===== */
-.left {
-  background: rgba(255,255,255,0.6);
-  padding: 15px;
-  border-radius: 16px;
-}
-
-/* ===== GRID CARTES ===== */
-.cardsRow {
-  display: grid;
-  grid-template-columns: repeat(6, 85px);
-  gap: 10px;
-}
-
-/* ===== CARTE ===== */
 .card {
-  width: 90px;        /* largeur fixe propre */
-  border-radius: 10px;
+  width: 140px;
+  aspect-ratio: 0.7;
+  border-radius: 12px;
   overflow: hidden;
+  transition: transform 0.5s ease, box-shadow 0.5s ease;
   background: #000;
 }
 
 .card img {
   width: 100%;
   height: 100%;
-  object-fit: contain;   /* 🔥 LA CLÉ */
+  object-fit: contain;
 }
+
+.headerBox {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+}
+
+.leftHeader img {
+  width: 60px;
+  border-radius: 8px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.value {
+  color: #16a34a;
+  font-size: 18px;
+}
+
+.statsHeader {
+  display: flex;
+  gap: 15px;
+  font-weight: bold;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 3fr 1.2fr;
+  gap: 20px;
+}
+
+
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 140px);
+  gap: 20px;
+}
+
 
 /* HOVER */
 .card:hover {
-  transform: scale(1.08);
+  transform: scale(1.05);
   z-index: 2;
 }
 
-/* FOIL */
-.card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent);
-  opacity: 0;
+/* 🟢 NOUVELLE */
+.card.new {
+  box-shadow: 0 0 15px #22c55e, 0 0 30px rgba(34,197,94,0.3);
 }
 
-.card:hover::after {
-  opacity: 1;
+/* 🔵 UTILE */
+.card.useful {
+  box-shadow: 0 0 15px #3b82f6, 0 0 25px rgba(59,130,246,0.3);
 }
 
-/* ===== STATS ===== */
-.stats {
-  margin-top: 15px;
-  font-weight: bold;
-  text-align: center;
-}
-
-/* ===== RIGHT SIDE ===== */
-.right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* ===== PANELS ===== */
-.panels {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+/* ⚫ INUTILE */
+.card.useless {
+  opacity: 0.4;
+  filter: grayscale(60%);
 }
 
 .panel {
   background: white;
   padding: 12px;
   border-radius: 14px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
 }
 
-/* ===== LIST ===== */
 .list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 320px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
-/* ===== ITEM ===== */
 .item {
   display: flex;
-  align-items: center;
   gap: 10px;
-  background: #f9f9f9;
-  padding: 8px;
-  border-radius: 10px;
+  background: white;
+  padding: 10px;
+  border-radius: 12px;
+  align-items: center;
   transition: 0.2s;
+  cursor: pointer;
 }
 
 .item:hover {
-  background: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
 }
 
-/* IMAGE */
 .item img {
-  width: 42px;
+  width: 50px;
   border-radius: 6px;
 }
 
-/* INFO */
-.info {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.top {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.user {
+.rank {
   font-weight: bold;
-  font-size: 13px;
 }
 
-/* VALUE */
-.value {
-  font-size: 13px;
+/* ✨ FOIL */
+.card.foil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 20%,
+    rgba(255,255,255,0.6),
+    rgba(0,255,255,0.4),
+    rgba(255,0,255,0.4),
+    transparent 80%
+  );
+  opacity: 0.7;
+  mix-blend-mode: overlay;
+  animation: holo 2s linear infinite;
 }
 
+@keyframes holo {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.card.foil {
+  box-shadow:
+    0 0 10px rgba(255,255,255,0.6),
+    0 0 20px rgba(0,255,255,0.4),
+    0 0 30px rgba(255,0,255,0.3);
+}
+    
 .good {
   color: #22c55e;
   font-weight: bold;
-}
-
-/* RANK */
-.rank {
-  font-weight: bold;
-  width: 25px;
-  text-align: center;
-}
-
-/* ===== TITRES ===== */
-h2 {
-  margin-bottom: 8px;
-}
-
-h3 {
-  margin-bottom: 10px;
 }
 `}</style>
     </main>
@@ -294,17 +354,27 @@ h3 {
 }
 
 function Card({ c }: any) {
-  return (
-    <div className={`card ${c.foil ? "foil" : ""}`}>
-      <img src={c.card.imageUrl} 
-      style={{
-            width: "100%",
-            height: "auto",
-            display: "block"
-          }}
-          />
+ const img =
+  c.card?.images?.full ||
+  c.card?.images?.large ||
+  c.card?.imageUrl ||
+  c.imageUrl;
 
-      {c.foil && <div className="foilEffect" />}
+  console.log(c.card);
+
+  // 🔥 sécurité anti image cassée
+  if (!img) return null;
+
+  return (
+    <div
+      className={`card 
+        ${c.isNew ? "new" : ""}
+        ${c.isUseful ? "useful" : ""}
+        ${c.alreadyOwned && c.otherOwned ? "useless" : ""}
+        ${c.foil === true ? "foil" : ""}
+      `}
+    >
+      <img src={img} />
     </div>
   );
 }

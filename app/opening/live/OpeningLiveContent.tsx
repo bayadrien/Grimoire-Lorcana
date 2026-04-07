@@ -7,6 +7,10 @@ import AppHeader from "app/components/AppHeader";
 type Card = {
   id: string;
   name: string;
+  name_fr?: string;
+  collection_number?: string;
+  usd?: number;
+  usd_foil?: number;
   imageUrl: string;
   isNew?: boolean;
   quantity?: number;
@@ -23,9 +27,22 @@ export default function OpeningLiveContent() {
   const [cards, setCards] = useState<Card[]>([]);
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<Card[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [collection, setCollection] = useState<Record<string, number>>({});
   const [otherCollection, setOtherCollection] = useState<Record<string, number>>({});
+
+  // 💱 conversion €
+  const toEuro = (usd?: number) =>
+    usd ? (usd * 0.92).toFixed(2) + "€" : "-";
+
+  // 🔥 Total Somme
+const totalValue = cards.reduce((sum, c) => {
+  const price = c.foil ? c.usd_foil : c.usd;
+  return sum + (price || 0);
+}, 0);
+
+const progress = (cards.length / 12) * 100;
 
   // ================== LOAD COLLECTION ==================
   useEffect(() => {
@@ -112,53 +129,26 @@ export default function OpeningLiveContent() {
     setSuggestions([]);
   }
 
-function removeLastCard() {
-  if (cards.length === 0) return;
+  function removeLastCard() {
+    setCards((prev) => prev.slice(0, -1));
+  }
 
-  setCards((prev) => prev.slice(0, -1));
-}
+  function toggleFoil() {
+    setCards((prev) => {
+      const copy = [...prev];
+      const index = copy.length - 1;
 
-function toggleFoil() {
-  setCards((prev) => {
-    const copy = [...prev];
-    const index = copy.length - 1;
+      if (index < 0) return prev;
 
-    if (index < 0) return prev;
+      copy[index] = {
+        ...copy[index],
+        foil: !copy[index].foil,
+      };
 
-    copy[index] = {
-      ...copy[index],
-      foil: !copy[index].foil,
-    };
-
-    return copy;
-  });
-}
-
-console.log("CARDS AVANT SAVE :", cards);
-
-  async function addToCollection() {
-  const userId = localStorage.getItem("activeUser") || "adrien";
-
-  for (const c of cards) {
-    const current = collection[c.id] || 0;
-
-    await fetch("/api/collection/setQty", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId,
-        cardId: c.id,
-        variant: "normal",
-        quantity: current + 1,
-      }),
+      return copy;
     });
   }
 
-  alert("✅ Booster ajouté au grimoire !");
-}
-  // ================== RENDER ==================
   const lastCard = cards[cards.length - 1];
   const isFoilCard = cards.length === 11 || cards.length === 12;
 
@@ -166,112 +156,135 @@ console.log("CARDS AVANT SAVE :", cards);
     <main className="shell">
       <AppHeader title="Ouverture" icon="✨" />
 
-      <section className="box">
+      <section className="layout">
 
-        {boosterImage && <img src={boosterImage} className="booster" />}
+        {/* LEFT */}
+        <div className="left">
+          {lastCard && (
+            <>
+              <div className={lastCard?.foil ? "foilCard current" : "current"}>
+                <img src={lastCard.imageUrl} />
+              </div>
 
-        {/* HISTORIQUE */}
-        <div className="history">
-          {cards.map((c, i) => (
-            <img key={i} src={c.imageUrl} />
-          ))}
+              {isFoilCard && (
+                <button className="foilBtn" onClick={toggleFoil}>
+                  ✨ {lastCard?.foil ? "Foil activée" : "Mettre en foil"}
+                </button>
+              )}
+            </>
+          )}
         </div>
 
-        {/* CARTE ACTUELLE */}
-        {lastCard && (
-          <>
-            <div className={lastCard?.foil ? "foilCard current" : "current"}>
-              <img src={lastCard.imageUrl} />
-            </div>
+        {/* RIGHT */}
+        <div className="right">
 
-            {isFoilCard && (
-              <button className="foilBtn" onClick={toggleFoil}>
-                ✨ {lastCard?.foil ? "Foil activée" : "Mettre en foil"}
-              </button>
-            )}
+  {/* BOOSTER + VALUE */}
+  <div className="boosterBox">
+    {boosterImage && <img src={boosterImage} />}
+    <div className="value">💰 {toEuro(totalValue)}</div>
+  </div>
 
-            {/* BADGES */}
-            <div className="badges">
-              {lastCard.isNew && (
-                <span className="badge new">
-                  🆕 Nouvelle carte
-                </span>
-              )}
+  {/* PROGRESS */}
+  <div className="progressBar">
+    <div
+      className="progressFill"
+      style={{ width: `${progress}%` }}
+    />
+  </div>
 
-              {lastCard.quantity! > 0 && (
-                <span className="badge dup">
-                  🔁 Déjà {lastCard.quantity}
-                </span>
-              )}
+  <div className="progressText">
+    🎴 {cards.length} / 12
+  </div>
 
-              {lastCard.forOtherUser && (
-                <span className="badge gift">
-                  🎁 Manque à l'autre
-                </span>
-              )}
-            </div>
-          </>
-        )}
+  {/* SEARCH */}
+  <div className="searchBox">
+    <input
+      className="pill input"
+      value={input}
+      onChange={(e) => handleChange(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+      placeholder="Nom ou numéro"
+    />
 
-        {/* PROGRESSION */}
-        <div className="progress">🎴 {cards.length} / 12</div>
-
-        {/* INPUT */}
-        <input
-          className="pill input"
-          value={input}
-          onChange={(e) => handleChange(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          placeholder="Nom ou numéro"
-        />
-
-        {/* SUGGESTIONS */}
-        {suggestions.length > 0 && (
-          <div className="suggestions">
-            {suggestions.map((c, i) => (
-              <div
-                key={i}
-                className="suggestionItem"
-                onClick={() => {
-                  const enriched = enrichCard(c);
-                  setCards((prev) => [...prev, enriched]);
-                  setInput("");
-                  setSuggestions([]);
-                }}
-              >
-                <img src={c.imageUrl} />
-                <span>{c.name}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <button className="btn" onClick={handleAdd}>
-          Valider
-        </button>
-
-        <button className="undoBtn" onClick={removeLastCard}>
-          ↩️ Annuler dernière carte
-        </button>
-
-{cards.length >= 12 && (
-  <>
-    <button className="btn" onClick={addToCollection}>
-      📥 Ajouter au grimoire
+    <button className="btn" onClick={handleAdd}>
+      Valider
     </button>
 
-    <a
+    <button className="undoBtn" onClick={removeLastCard}>
+      ↩️ Annuler
+    </button>
+  </div>
+
+  {/* SUGGESTIONS */}
+  {suggestions.length > 0 && (
+    <div className="suggestions">
+      {suggestions.map((c, i) => (
+        <div
+          key={i}
+          className="suggestionItem"
+          onClick={() => {
+            const enriched = enrichCard(c);
+            setCards((prev) => [...prev, enriched]);
+            setInput("");
+            setSuggestions([]);
+          }}
+        >
+          <img src={c.imageUrl} />
+          <span>{c.name}</span>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {/* CARD INFO */}
+  {lastCard && (
+    <div className="cardInfo">
+
+      <div className="title">
+        {lastCard.name_fr || lastCard.name}
+      </div>
+
+      <div className="number">
+        #{lastCard.collection_number || "-"}
+      </div>
+
+      <div className="prices">
+        <div>💰 {toEuro(lastCard.usd)}</div>
+        <div>✨ {toEuro(lastCard.usd_foil)}</div>
+      </div>
+
+      <div className="badges">
+        {lastCard.isNew && <span className="badge new">🆕 Nouvelle</span>}
+        {lastCard.quantity! > 0 && (
+          <span className="badge dup">🔁 x{lastCard.quantity}</span>
+        )}
+        {lastCard.forOtherUser && (
+          <span className="badge gift">🎁 Utile</span>
+        )}
+      </div>
+
+    </div>
+  )}
+
+  {/* FINISH BUTTON */}
+  {cards.length === 12 && (
+    <button
       className="finish"
       onClick={async () => {
+        if (loading) return;
+        setLoading(true);
+
         const userId = localStorage.getItem("activeUser") || "adrien";
 
-console.log("CARDS AVANT SAVE :", cards);
+        await fetch("/api/collection/addBooster", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, cards }),
+        });
 
         const res = await fetch("/api/booster/save", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId,
             chapter,
@@ -285,117 +298,92 @@ console.log("CARDS AVANT SAVE :", cards);
         window.location.href = `/opening/result?id=${data.id}`;
       }}
     >
-      Voir le résultat
-    </a>
-  </>
-)}
+      🎉 Terminer le booster
+    </button>
+  )}
 
-        {cards.length === 0 && (
-          <div className="empty">
-            Commence à entrer une carte 🎴
-          </div>
-        )}
+</div>
+
+        {/* HISTORY */}
+        <div className="historyFull">
+          {cards.map((c, i) => (
+            <img key={i} src={c.imageUrl} />
+          ))}
+        </div>
+
       </section>
 
-      {/* STYLE */}
       <style jsx>{`
-        .box {
-          max-width: 420px;
+        .layout {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 20px;
+          max-width: 900px;
           margin: auto;
+        }
+
+        .left {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .right {
           display: flex;
           flex-direction: column;
           gap: 12px;
         }
 
-        .booster {
-          width: 70px;
-          margin: auto;
-        }
-
-        .history {
-          display: flex;
-          gap: 6px;
-          overflow-x: auto;
-        }
-
-        .history img {
-          width: 55px;
-          border-radius: 6px;
-        }
-
         .current img {
-          width: 50%;
-          border-radius: 10px;
+          width: 100%;
+          max-width: 320px;
+          border-radius: 12px;
         }
 
-        .foilCard img {
-          box-shadow: 0 0 20px rgba(255,255,255,0.8);
-          animation: shine 2s infinite linear;
-        }
+.searchBox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-        @keyframes shine {
-          0% { filter: brightness(1); }
-          50% { filter: brightness(1.4); }
-          100% { filter: brightness(1); }
-        }
-
-        .badges {
+        .cardInfo {
+          background: white;
+          border-radius: 16px;
+          padding: 14px;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.05);
           display: flex;
-          justify-content: center;
+          flex-direction: column;
           gap: 8px;
-          flex-wrap: wrap;
         }
 
-        .badge {
+        .title {
+          font-weight: bold;
+          font-size: 16px;
+        }
+
+        .number {
           font-size: 13px;
-          padding: 6px 10px;
-          border-radius: 999px;
-          font-weight: 500;
-        }
-          
-        /* Nouvelle */
-        .badge.new {
-          background: #d1fae5;
-          color: #065f46;
+          opacity: 0.6;
         }
 
-        /* Doublon */
-        .badge.dup {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        /* Angèle */
-        .badge.gift {
-          background: #ede9fe;
-          color: #5b21b6;
-        }
-
-        .badges span {
-          font-size: 12px;
-          padding: 4px 8px;
-          border-radius: 999px;
-        }
-
-        .new {
-          background: #d1fae5;
-        }
-
-        .dup {
-          background: #eee;
-        }
-
-        .gift {
-          background: #f3e8ff;
-        }
-
-        .progress {
-          text-align: center;
+        .prices {
+          display: flex;
+          justify-content: space-between;
           font-weight: bold;
         }
 
-        .input {
-          width: 100%;
+        .historyFull {
+          grid-column: span 2;
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          margin-top: 10px;
+        }
+
+        .historyFull img {
+          width: 60px;
+          border-radius: 6px;
         }
 
         .btn {
@@ -405,27 +393,29 @@ console.log("CARDS AVANT SAVE :", cards);
           color: white;
         }
 
+        .undoBtn {
+          padding: 10px;
+          border-radius: 10px;
+          background: #eee;
+        }
+
         .foilBtn {
+          margin-top: 10px;
           padding: 10px;
           border-radius: 999px;
           background: linear-gradient(90deg, #fff, #f3e8ff);
-          cursor: pointer;
           font-weight: bold;
         }
 
-        .finish {
-          text-align: center;
-          padding: 12px;
-          background: #333;
-          color: white;
-          border-radius: 10px;
-        }
-
-        .suggestions {
-          background: white;
-          border-radius: 10px;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
+.suggestions {
+  position: absolute;
+  width: 100%;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  z-index: 10;
+  margin-top: 5px;
+}
 
         .suggestionItem {
           display: flex;
@@ -442,18 +432,77 @@ console.log("CARDS AVANT SAVE :", cards);
           background: #f7edd9;
         }
 
-        .undoBtn {
-          padding: 10px;
-          border-radius: 10px;
-          background: #eee;
-          cursor: pointer;
-          font-size: 14px;
+        .badges {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
         }
 
-        .empty {
-          text-align: center;
-          opacity: 0.6;
+        .badge {
+          font-size: 12px;
+          padding: 4px 8px;
+          border-radius: 999px;
         }
+
+        .badge.new {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        .badge.dup {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .badge.gift {
+          background: #ede9fe;
+          color: #5b21b6;
+        }
+
+        .boosterBox {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.boosterBox img {
+  width: 70px;
+  border-radius: 6px;
+  }
+
+.value {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.progressBar {
+  height: 8px;
+  background: #e5e5e5;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: #c9a86a;
+  transition: 0.4s;
+}
+
+.progressText {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.finish {
+  padding: 12px;
+  background: #333;
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+}
+  s
       `}</style>
     </main>
   );

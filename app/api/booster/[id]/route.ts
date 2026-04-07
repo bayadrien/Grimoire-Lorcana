@@ -23,26 +23,37 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // ================== COLLECTION USER ==================
-    const userCollection = await prisma.collection.findMany({
-      where: { userId: opening.userId },
+    // ================== COLLECTION AVANT CE BOOSTER ==================
+    const previousCards = await prisma.boosterCard.findMany({
+      where: {
+        opening: {
+          userId: opening.userId,
+          createdAt: {
+            lt: opening.createdAt, // 🔥 uniquement les boosters AVANT
+          },
+        },
+      },
+      select: {
+        cardId: true,
+      },
     });
 
+    // 🧠 On compte combien le joueur avait de chaque carte AVANT
     const collectionMap: Record<string, number> = {};
 
-    userCollection.forEach((c) => {
-      collectionMap[c.cardId] = c.quantity;
+    previousCards.forEach((c) => {
+      collectionMap[c.cardId] = (collectionMap[c.cardId] || 0) + 1;
     });
 
     // ================== ENRICH CARDS ==================
     const enrichedCards = opening.cards.map((c) => {
-      const qty = collectionMap[c.cardId] || 0;
+      const qtyBefore = collectionMap[c.cardId] || 0;
 
       return {
         ...c,
-        alreadyOwned: qty > 0,      // carte déjà possédée
-        quantityOwned: qty,         // combien il en a
-        isPlaysetFull: qty >= 4,    // utile si tu veux gérer les "vrais doublons"
+        alreadyOwned: qtyBefore > 0,   // AVANT ouverture
+        quantityOwned: qtyBefore,      // combien il en avait
+        isPlaysetFull: qtyBefore >= 4, // playset complet
       };
     });
 

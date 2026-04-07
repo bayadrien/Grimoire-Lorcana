@@ -7,7 +7,14 @@ export async function GET() {
       orderBy: {
         createdAt: "desc",
       },
-      take: 20, // limite (optionnel)
+      take: 20,
+      include: {
+        cards: {
+          include: {
+            card: true, // 🔥 récupère les données (usd, image, etc)
+          },
+        },
+      },
     });
 
     return NextResponse.json(openings);

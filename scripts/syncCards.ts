@@ -8,7 +8,7 @@ function sleep(ms: number) {
 type LorcastSet = {
   id: string;
   name: string;
-  code: string; // "1", "2", ... "D100" etc
+  code: string;
 };
 
 type LorcastCard = {
@@ -30,83 +30,80 @@ async function main() {
   console.log("🔎 Récupération des sets…");
 
   const setsRes = await fetch("https://api.lorcast.com/v0/sets");
-  if (!setsRes.ok) throw new Error(`Sets fetch failed: ${setsRes.status}`);
   const setsJson = await setsRes.json();
 
   const sets: LorcastSet[] = setsJson.results || [];
+
   const chapterSets = sets
     .filter((s) => /^\d+$/.test(s.code))
-    .map((s) => ({ ...s, codeNum: Number(s.code) }))
-    .filter((s) => s.codeNum >= 1)
-    .sort((a, b) => a.codeNum - b.codeNum);
+    .sort((a, b) => Number(a.code) - Number(b.code));
 
-  console.log(`📦 Sets chapitres trouvés: ${chapterSets.map((s) => s.code).join(", ")}`);
+  console.log(`📦 Sets: ${chapterSets.map((s) => s.code).join(", ")}`);
 
-  let totalUpserts = 0;
+  let total = 0;
 
   for (const s of chapterSets) {
-    console.log(`\n📚 Import set ${s.code} - ${s.name}`);
+    console.log(`\n📚 Import set ${s.code}`);
 
-    // Respect du rate limit (50–100ms conseillé)
-    await sleep(90);
+    await sleep(200);
 
-    const url = `https://api.lorcast.com/v0/sets/${encodeURIComponent(s.code)}/cards`;
-    const cardsRes = await fetch(url);
-    if (!cardsRes.ok) throw new Error(`Cards fetch failed for set ${s.code}: ${cardsRes.status}`);
+    const res = await fetch(`https://api.lorcast.com/v0/sets/${s.code}/cards`);
+    const cards: LorcastCard[] = await res.json();
 
-    const cards: LorcastCard[] = await cardsRes.json();
+    let count = 0;
 
-    // Upsert en base
-    for (const c of cards) {
-      const imageUrl = c.image_uris?.digital?.normal ?? null;
-      const typeStr = Array.isArray(c.type) ? c.type.join(", ") : null;
+for (const c of cards) {
+  const name = c.name.replace(/'/g, "''"); // éviter erreurs SQL
 
-      await prisma.card.upsert({
-        where: { id: c.id },
-        update: {
-          name: c.name,
-          setName: c.set?.name ?? s.name,
-          setCode: c.set?.code ?? s.code,
-          ink: c.ink ?? null,
-          rarity: c.rarity ?? null,
-          type: typeStr,
-          cost: c.cost ?? null,
-          strength: c.strength ?? null,
-          willpower: c.willpower ?? null,
-          lore: c.lore ?? null,
-          text: c.text ?? null,
-          imageUrl,
-        },
-        create: {
-          id: c.id,
-          name: c.name,
-          setName: c.set?.name ?? s.name,
-          setCode: c.set?.code ?? s.code,
-          ink: c.ink ?? null,
-          rarity: c.rarity ?? null,
-          type: typeStr,
-          cost: c.cost ?? null,
-          strength: c.strength ?? null,
-          willpower: c.willpower ?? null,
-          lore: c.lore ?? null,
-          text: c.text ?? null,
-          imageUrl,
-        },
-      });
+  const typeStr = Array.isArray(c.type) ? c.type.join(", ") : null;
 
-      totalUpserts++;
-    }
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO "Card" (
+      id, name, "setName", "setCode", ink, rarity, type,
+      cost, strength, willpower, lore, text, "imageUrl"
+    )
+    VALUES (
+      '${c.id}',
+      '${name}',
+      '${c.set?.name ?? s.name}',
+      '${c.set?.code ?? s.code}',
+      ${c.ink ? `'${c.ink}'` : "NULL"},
+      ${c.rarity ? `'${c.rarity}'` : "NULL"},
+      ${typeStr ? `'${typeStr}'` : "NULL"},
+      ${c.cost ?? "NULL"},
+      ${c.strength ?? "NULL"},
+      ${c.willpower ?? "NULL"},
+      ${c.lore ?? "NULL"},
+      ${c.text ? `'${c.text.replace(/'/g, "''")}'` : "NULL"},
+      ${c.image_uris?.digital?.normal ? `'${c.image_uris.digital.normal}'` : "NULL"}
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      name = EXCLUDED.name,
+      "setName" = EXCLUDED."setName",
+      "setCode" = EXCLUDED."setCode",
+      ink = EXCLUDED.ink,
+      rarity = EXCLUDED.rarity,
+      type = EXCLUDED.type,
+      cost = EXCLUDED.cost,
+      strength = EXCLUDED.strength,
+      willpower = EXCLUDED.willpower,
+      lore = EXCLUDED.lore,
+      text = EXCLUDED.text,
+      "imageUrl" = EXCLUDED."imageUrl";
+  `);
 
-    console.log(`✅ ${cards.length} cartes importées pour le set ${s.code}`);
+  await sleep(10);
+}
+
+    console.log(`✅ Set ${s.code} terminé (${cards.length} cartes)`);
   }
 
-  console.log(`\n🎉 Terminé. Total upserts: ${totalUpserts}`);
+  console.log(`\n🎉 Sync terminé : ${total} cartes`);
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Sync failed:", e);
-    process.exit(1);
+    console.error("❌ Erreur :", e);
   })
   .finally(async () => {
     await prisma.$disconnect();

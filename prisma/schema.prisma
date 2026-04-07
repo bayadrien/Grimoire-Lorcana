@@ -8,11 +8,6 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum Variant {
-  normal
-  foil
-}
-
 model User {
   id          String       @id
   name        String
@@ -20,38 +15,43 @@ model User {
 }
 
 model Card {
-  id        String   @id
-  name      String
-  name_fr   String?
-  setName   String
-  setCode   String?
-  ink       String?
-  rarity    String?
-  type      String?
-  cost      Int?
-  strength  Int?
-  willpower Int?
-  lore      Int?
-  text      String?
-  imageUrl  String?
-  updatedAt DateTime @updatedAt
-  boosterCards BoosterCard[]
-  collection_number String? @map("collection_number")
+  id                String   @id
+  name              String
+  setName           String
+  setCode           String?
+  ink               String?
+  rarity            String?
+  type              String?
+  text              String?
+  imageUrl          String?
+  updatedAt         DateTime @updatedAt
+  collection_number String?  @map("collection_number")
+  name_fr           String?
+  usd               Float?
+  usd_foil          Float?
 
-  collections Collection[]
-  trades      Trade[]
+  boosterCards BoosterCard[]
+  collections  Collection[]
+  trades       Trade[]
+
+  @@map("Card_new")
 }
 
 model Collection {
   userId   String
   cardId   String
-  variant  Variant
   quantity Int
+  variant  Variant
 
   user User @relation(fields: [userId], references: [id])
   card Card @relation(fields: [cardId], references: [id])
 
   @@unique([userId, cardId, variant])
+
+  @@index([userId])
+  @@index([cardId])
+  @@index([userId, cardId])
+
 }
 
 model Trade {
@@ -81,11 +81,16 @@ model BoosterOpening {
 }
 
 model BoosterCard {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   openingId String
   cardId    String
   foil      Boolean @default(false)
 
+  card    Card          @relation(fields: [cardId], references: [id])
   opening BoosterOpening @relation(fields: [openingId], references: [id])
-  card    Card @relation(fields: [cardId], references: [id])
+}
+
+enum Variant {
+  normal
+  foil
 }
