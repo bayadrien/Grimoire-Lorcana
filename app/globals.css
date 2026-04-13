@@ -1375,3 +1375,7 @@ input.pill{
   position: relative;
   width: 100%;
 }
+
+.aspect-\[2\.5\/3\.5\] {
+  aspect-ratio: 2.5 / 3.5;
+}

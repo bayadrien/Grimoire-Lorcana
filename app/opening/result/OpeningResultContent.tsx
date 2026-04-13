@@ -67,6 +67,14 @@ export default function OpeningResultContent() {
       <div>
         Chapitre {opening.chapter}
       </div>
+
+      <div style={{ fontSize: 12, opacity: 0.6 }}>
+        👤 {opening.userId}
+      </div>
+
+      <div style={{ fontSize: 12, opacity: 0.6 }}>
+        📅 {new Date(opening.createdAt).toLocaleDateString()}
+      </div>
     </div>
   </div>
 
@@ -204,6 +212,17 @@ export default function OpeningResultContent() {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.cardValue {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0,0,0,0.7);
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
 }
 
 .headerBox {
@@ -365,16 +384,22 @@ function Card({ c }: any) {
   // 🔥 sécurité anti image cassée
   if (!img) return null;
 
-  return (
-    <div
-      className={`card 
-        ${c.isNew ? "new" : ""}
-        ${c.isUseful ? "useful" : ""}
-        ${c.alreadyOwned && c.otherOwned ? "useless" : ""}
-        ${c.foil === true ? "foil" : ""}
-      `}
-    >
-      <img src={img} />
+return (
+  <div
+    className={`card 
+      ${c.isNew ? "new" : ""}
+      ${c.isUseful ? "useful" : ""}
+      ${c.alreadyOwned && c.otherOwned ? "useless" : ""}
+      ${c.foil === true ? "foil" : ""}
+    `}
+  >
+    <img src={img} />
+
+    {/* 💰 VALEUR CARTE */}
+    <div className="cardValue">
+      💰 {c.value.toFixed(2)}€
     </div>
-  );
+
+  </div>
+);
 }

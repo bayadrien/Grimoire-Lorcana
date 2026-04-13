@@ -23,7 +23,6 @@ export async function GET(req: Request) {
       setCode: true,
       ink: true,
       rarity: true,
-      cost: true,
       imageUrl: true,
     },
   });
