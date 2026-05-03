@@ -10,4 +10,5 @@ export const CHAPTERS_NAMES_FR: Record<string, string> = {
   "9": "Fabuleux",
   "10": "Lueurs dans les Profondeurs",
   "11": "Givresort",
+  "12": "Contrées Inconnues",
 };

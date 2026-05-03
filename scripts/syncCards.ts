@@ -15,16 +15,21 @@ type LorcastCard = {
   id: string;
   name: string;
   text?: string | null;
-  cost?: number | null;
-  strength?: number | null;
-  willpower?: number | null;
-  lore?: number | null;
   rarity?: string | null;
   ink?: string | null;
   type?: string[] | null;
   set?: { code: string; name: string } | null;
   image_uris?: { digital?: { normal?: string } } | null;
 };
+
+async function getExistingSetCodes() {
+  const sets = await prisma.card.findMany({
+    select: { setCode: true },
+    distinct: ["setCode"],
+  });
+
+  return sets.map((s) => s.setCode);
+}
 
 async function main() {
   console.log("🔎 Récupération des sets…");
@@ -40,60 +45,64 @@ async function main() {
 
   console.log(`📦 Sets: ${chapterSets.map((s) => s.code).join(", ")}`);
 
+  const existingSetCodes = await getExistingSetCodes();
+
+  const newSets = chapterSets.filter(
+    (s) => !existingSetCodes.includes(s.code)
+  );
+
+  if (newSets.length === 0) {
+    console.log("✅ Aucun nouveau chapitre à importer");
+    return;
+  }
+
+  console.log(
+    "🚨 Nouveaux chapitres détectés :",
+    newSets.map((s) => s.code)
+  );
+
   let total = 0;
 
-  for (const s of chapterSets) {
+  for (const s of newSets) {
     console.log(`\n📚 Import set ${s.code}`);
 
     await sleep(200);
 
-    const res = await fetch(`https://api.lorcast.com/v0/sets/${s.code}/cards`);
+    const res = await fetch(
+      `https://api.lorcast.com/v0/sets/${s.code}/cards`
+    );
     const cards: LorcastCard[] = await res.json();
 
-    let count = 0;
+    for (const c of cards) {
+      const typeStr = Array.isArray(c.type) ? c.type.join(", ") : null;
 
-for (const c of cards) {
-  const name = c.name.replace(/'/g, "''"); // éviter erreurs SQL
+      await prisma.card.upsert({
+        where: { id: c.id },
+        update: {
+          name: c.name,
+          setName: c.set?.name ?? s.name,
+          setCode: c.set?.code ?? s.code,
+          ink: c.ink ?? null,
+          rarity: c.rarity ?? null,
+          type: typeStr,
+          text: c.text ?? null,
+          imageUrl: c.image_uris?.digital?.normal ?? null,
+        },
+        create: {
+          id: c.id,
+          name: c.name,
+          setName: c.set?.name ?? s.name,
+          setCode: c.set?.code ?? s.code,
+          ink: c.ink ?? null,
+          rarity: c.rarity ?? null,
+          type: typeStr,
+          text: c.text ?? null,
+          imageUrl: c.image_uris?.digital?.normal ?? null,
+        },
+      });
 
-  const typeStr = Array.isArray(c.type) ? c.type.join(", ") : null;
-
-  await prisma.$executeRawUnsafe(`
-    INSERT INTO "Card" (
-      id, name, "setName", "setCode", ink, rarity, type,
-      cost, strength, willpower, lore, text, "imageUrl"
-    )
-    VALUES (
-      '${c.id}',
-      '${name}',
-      '${c.set?.name ?? s.name}',
-      '${c.set?.code ?? s.code}',
-      ${c.ink ? `'${c.ink}'` : "NULL"},
-      ${c.rarity ? `'${c.rarity}'` : "NULL"},
-      ${typeStr ? `'${typeStr}'` : "NULL"},
-      ${c.cost ?? "NULL"},
-      ${c.strength ?? "NULL"},
-      ${c.willpower ?? "NULL"},
-      ${c.lore ?? "NULL"},
-      ${c.text ? `'${c.text.replace(/'/g, "''")}'` : "NULL"},
-      ${c.image_uris?.digital?.normal ? `'${c.image_uris.digital.normal}'` : "NULL"}
-    )
-    ON CONFLICT (id) DO UPDATE SET
-      name = EXCLUDED.name,
-      "setName" = EXCLUDED."setName",
-      "setCode" = EXCLUDED."setCode",
-      ink = EXCLUDED.ink,
-      rarity = EXCLUDED.rarity,
-      type = EXCLUDED.type,
-      cost = EXCLUDED.cost,
-      strength = EXCLUDED.strength,
-      willpower = EXCLUDED.willpower,
-      lore = EXCLUDED.lore,
-      text = EXCLUDED.text,
-      "imageUrl" = EXCLUDED."imageUrl";
-  `);
-
-  await sleep(10);
-}
+      total++;
+    }
 
     console.log(`✅ Set ${s.code} terminé (${cards.length} cartes)`);
   }

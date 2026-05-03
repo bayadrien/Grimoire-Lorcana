@@ -42,6 +42,7 @@ const CHAPTER_BACKGROUNDS: Record<string, string> = {
   "9": "/chapters/9.jpg",
   "10": "/chapters/10.jpg",
   "11": "/chapters/11.jpg",
+  "12": "/chapters/12.jpg",
 };
 
 function percent(a: number, b: number) {
