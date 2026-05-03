@@ -16,7 +16,7 @@ model User {
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model Card {
-  id                String?   @unique(map: "card_new_id_unique")
+  id                String   @id
   name              String?
   setName           String?
   setCode           String?
@@ -32,7 +32,6 @@ model Card {
   usd_foil          Float?
 
   @@map("Card_new")
-  @@ignore
 }
 
 model Collection {
