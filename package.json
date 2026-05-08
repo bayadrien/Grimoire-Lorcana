@@ -11,7 +11,8 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
     "sync:cards": "ts-node scripts/syncCards.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "sync:prices": "ts-node scripts/SyncPrices.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

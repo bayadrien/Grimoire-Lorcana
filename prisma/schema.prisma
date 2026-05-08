@@ -30,7 +30,9 @@ model Card {
   name_fr           String?
   usd               Float?
   usd_foil          Float?
-
+  collections       Collection[]
+  trades            Trade[]
+  boosterCards      BoosterCard[]
   @@map("Card_new")
 }
 
@@ -39,7 +41,7 @@ model Collection {
   cardId   String
   quantity Int
   variant  Variant
-  card     public_Card @relation(fields: [cardId], references: [id])
+  card     Card @relation(fields: [cardId], references: [id])
   user     User        @relation(fields: [userId], references: [id])
 
   @@unique([userId, cardId, variant])
@@ -56,7 +58,7 @@ model Trade {
   cardId    String
   quantity  Int         @default(1)
   createdAt DateTime    @default(now())
-  card      public_Card @relation(fields: [cardId], references: [id])
+  card      Card @relation(fields: [cardId], references: [id])
 
   @@index([fromUser, toUser])
   @@index([cardId])
@@ -78,32 +80,8 @@ model BoosterCard {
   openingId String
   cardId    String
   foil      Boolean        @default(false)
-  card      public_Card    @relation(fields: [cardId], references: [id])
+  card      Card    @relation(fields: [cardId], references: [id])
   opening   BoosterOpening @relation(fields: [openingId], references: [id])
-}
-
-model public_Card {
-  id                String        @id
-  name              String
-  setName           String
-  setCode           String?
-  ink               String?
-  rarity            String?
-  type              String?
-  cost              Int?
-  strength          Int?
-  willpower         Int?
-  lore              Int?
-  text              String?
-  imageUrl          String?
-  updatedAt         DateTime
-  collection_number String?
-  name_fr           String?
-  boosterCards      BoosterCard[]
-  collections       Collection[]
-  trades            Trade[]
-
-  @@map("Card")
 }
 
 enum Variant {

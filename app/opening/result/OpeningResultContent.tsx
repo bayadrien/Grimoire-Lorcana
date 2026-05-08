@@ -12,7 +12,7 @@ export default function OpeningResultContent() {
   const [history, setHistory] = useState<any[]>([]);
 
   const toEuro = (usd?: number) =>
-    usd ? usd * 0.92 : 0;
+    typeof usd === "number" ? usd * 0.92 : 0;
 
   useEffect(() => {
     if (!id) return;
@@ -30,6 +30,9 @@ export default function OpeningResultContent() {
 
   // 🧠 enrichissement cartes
   const cards = opening.cards.map((c: any) => {
+
+    console.log("DEBUG CARD:", c.card); // 👈 AJOUTE ÇA
+
     const price = c.foil ? toEuro(c.card.usd_foil) : toEuro(c.card.usd);
 
     return {

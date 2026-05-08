@@ -1,258 +1,264 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-type Props = {
-  title: string;
-  subtitle?: string;
-  icon?: string;
-};
+type User = "adrien" | "angele";
 
-export default function AppHeader({
-  title,
-  subtitle,
-  icon = "📜",
-}: Props) {
-  const router = useRouter();
+export default function AppHeader() {
+  const pathname = usePathname();
+
+  const [activeUser, setActiveUser] = useState<User>("adrien");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeUser, setActiveUser] = useState<"adrien" | "angele">("adrien");
 
   useEffect(() => {
-    const u =
-      (localStorage.getItem("activeUser") as "adrien" | "angele") || "adrien";
+    const u = (localStorage.getItem("activeUser") as User) || "adrien";
     setActiveUser(u);
   }, []);
 
-  function changeUser(u: "adrien" | "angele") {
+  function changeUser(u: User) {
     setActiveUser(u);
     localStorage.setItem("activeUser", u);
     window.location.reload();
   }
 
+  const navItems = [
+    { href: "/", label: "Cartes", icon: "🎴" },
+    { href: "/chapitres", label: "Chapitres", icon: "📚" },
+    { href: "/stats", label: "Stats", icon: "📊" },
+    { href: "/echange", label: "Échange", icon: "🤝" },
+    { href: "/opening", label: "Opening", icon: "🎁" },
+    { href: "/opening/history", label: "Historique", icon: "📜" },
+  ];
+
   return (
     <>
-      <header className="topbar boss">
-        {/* ✨ TITRE */}
-        <div className="brand">
-          <div className="sigil">{icon}</div>
-          <div className="titleBlock">
-            <h1 className="magicTitle">{title}</h1>
-            {subtitle && <p>{subtitle}</p>}
+      <header className="nav">
+        {/* LEFT */}
+        <div className="left">
+          <div className="logo">✨</div>
+          <div className="brandText">
+            <div className="title">Grimoire</div>
+            <div className="subtitle">Lorcana</div>
           </div>
         </div>
 
-        {/* 👤 USER */}
-        <div className="userSwitch hide-mobile">
+        {/* CENTER */}
+        <div className="center">
+          {navItems.map((item) => {
+            const isActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`link ${isActive ? "active" : ""}`}
+              >
+                <span>{item.icon}</span>
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* RIGHT */}
+        <div className="right">
           <select
             value={activeUser}
-            onChange={(e) => changeUser(e.target.value as "adrien" | "angele")}
+            onChange={(e) =>
+              changeUser(e.target.value as User)
+            }
           >
             <option value="adrien">Adrien</option>
             <option value="angele">Angèle</option>
           </select>
+
+          <button className="burger" onClick={() => setMenuOpen(true)}>
+            ☰
+          </button>
         </div>
-
-        {/* 🖥️ NAV */}
-        <nav className="nav-desktop hide-mobile">
-          <Link href="/" className="nav-link">🎴 Cartes</Link>
-
-          {/* 📚 CHAPITRES */}
-          <div className="nav-item group">
-            <span className="nav-link">📚 Chapitres</span>
-            <div className="dropdown">
-              {[...Array(11)].map((_, i) => (
-                <Link
-                  key={i}
-                  href={`/chapitres/${i + 1}`}
-                  className="dropdown-link"
-                >
-                  Chapitre {i + 1}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <Link href="/stats" className="nav-link">📊 Stats</Link>
-          <Link href="/echange" className="nav-link">🤝 Échange</Link>
-
-          {/* 💰 OPENING */}
-          <div className="nav-item group">
-            <span className="nav-link">💰 Opening</span>
-            <div className="dropdown">
-              <Link href="/opening" className="dropdown-item">
-                🎁 Ouvrir un booster
-              </Link>
-              <Link href="/opening/history" className="dropdown-item">
-                📜 Historique
-              </Link>
-            </div>
-          </div>
-        </nav>
-
-        {/* 📱 BURGER */}
-        <button
-          className="burger show-mobile"
-          onClick={() => setMenuOpen(true)}
-        >
-          ☰
-        </button>
       </header>
 
-      {/* 📱 MOBILE */}
+      {/* MOBILE */}
       {menuOpen && (
-        <div className="mobileOverlay" onClick={() => setMenuOpen(false)}>
-          <div
-            className="mobileMenu boss"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button className="close" onClick={() => setMenuOpen(false)}>
-              ✕
-            </button>
+        <div className="overlay" onClick={() => setMenuOpen(false)}>
+          <div className="menu" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setMenuOpen(false)}>✕</button>
 
-            <div className="mobileUserSwitch">
-              <label>Collection</label>
-              <select
-                value={activeUser}
-                onChange={(e) =>
-                  changeUser(e.target.value as "adrien" | "angele")
-                }
-              >
-                <option value="adrien">Adrien</option>
-                <option value="angele">Angèle</option>
-              </select>
-            </div>
-
-            <hr />
-
-            <Link href="/" onClick={() => setMenuOpen(false)}>
-              🎴 Cartes
-            </Link>
-
-            {[...Array(11)].map((_, i) => (
+            {navItems.map((item) => (
               <Link
-                key={i}
-                href={`/chapitres/${i + 1}`}
+                key={item.href}
+                href={item.href}
                 onClick={() => setMenuOpen(false)}
               >
-                📚 Chapitre {i + 1}
+                {item.icon} {item.label}
               </Link>
             ))}
-
-            <Link href="/stats" onClick={() => setMenuOpen(false)}>
-              📊 Stats
-            </Link>
-            <Link href="/echange" onClick={() => setMenuOpen(false)}>
-              🤝 Échange
-            </Link>
-
-            <Link href="/opening" onClick={() => setMenuOpen(false)}>
-              💰 Ouvrir
-            </Link>
-            <Link href="/opening/history" onClick={() => setMenuOpen(false)}>
-              📜 Historique
-            </Link>
           </div>
         </div>
       )}
 
-      {/* 🎨 STYLE DIRECT */}
       <style jsx global>{`
-        .magicTitle {
-          font-size: 1.6rem;
-          font-weight: 600;
-          background: linear-gradient(90deg, #ffd700, #fff2b0, #a855f7);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+        /* NAVBAR */
+        .nav {
+          position: sticky;
+          top: 0;
+          z-index: 1000;
+
+          width: 100%;
+          height: 64px;
+
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          padding: 0 20px;
+
+          background: rgba(255,255,255,0.92);
+          backdrop-filter: blur(12px);
+
+          border-bottom-left-radius: 18px;
+          border-bottom-right-radius: 18px;
+
+          box-shadow: 0 8px 25px rgba(0,0,0,0.08);
         }
 
-        .nav-item {
-          position: relative;
+        /* LEFT */
+        .left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .logo {
+          width: 36px;
+          height: 36px;
+          border-radius: 12px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          background: linear-gradient(135deg, #ffd700, #ffb800);
+          color: white;
+          font-size: 18px;
+
+          box-shadow: 0 6px 14px rgba(255,184,0,0.3);
+        }
+
+        .brandText .title {
+          font-weight: 600;
+          font-size: 15px;
+
+          background: linear-gradient(90deg, #ffd700, #ffb800);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .brandText .subtitle {
+          font-size: 12px;
+          color: #777;
+        }
+
+        /* CENTER NAV */
+        .center {
+          display: flex;
+          gap: 4px;
+
+          background: rgba(0,0,0,0.04);
+          padding: 4px;
+          border-radius: 999px;
+        }
+
+        .link {
+          padding: 8px 14px;
+          border-radius: 999px;
+
+          display: flex;
+          align-items: center;
+          gap: 6px;
+
+          font-size: 14px;
+          font-weight: 500;
+          color: #444;
+
+          transition: all 0.2s ease;
+        }
+
+        .link:hover {
+          background: rgba(0,0,0,0.06);
+          color: black;
+        }
+
+        .link.active {
+          background: linear-gradient(90deg, #ffd700, #ffb800);
+          color: black;
+
+          box-shadow: 0 4px 10px rgba(255,184,0,0.25);
+        }
+
+        /* RIGHT */
+        .right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .right select {
+          border: none;
+          padding: 6px 12px;
+          border-radius: 999px;
+          background: #f3f3f3;
           cursor: pointer;
         }
 
-.dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  min-width: 180px;
-  padding: 6px;
-  margin-top: 0;
-  border-radius: 10px;
-  background: white;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        /* BURGER */
+        .burger {
+          display: none;
+          background: none;
+          border: none;
+          font-size: 20px;
+        }
 
-  opacity: 0;
-  transform: translateY(8px);
-  pointer-events: none;
+        /* MOBILE */
+        @media (max-width: 768px) {
+          .center {
+            display: none;
+          }
 
-  transition: all 0.15s ease;
-  z-index: 999;
-}
+          .burger {
+            display: block;
+          }
+        }
 
-.group:hover .dropdown {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
+        .overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.4);
+        }
 
-/* ⚠️ RESET TOTAL DU STYLE DES ITEMS */
-.dropdown a {
-  all: unset; /* 💥 ça enlève TOUS les styles hérités */
+        .menu {
+          position: absolute;
+          right: 0;
+          top: 0;
+          width: 260px;
+          height: 100%;
 
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
+          background: white;
+          padding: 20px;
 
-  font-size: 14px;
-  cursor: pointer;
-  border-radius: 6px;
-}
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
 
-/* hover clean */
-.dropdown a:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-/* RESET TOTAL ULTRA FORCÉ */
-.dropdown .dropdown-link {
-  all: unset !important;
-
-  display: block !important;
-  width: 100% !important;
-
-  padding: 8px 12px !important;
-  border-radius: 6px !important;
-
-  font-size: 14px !important;
-  cursor: pointer !important;
-}
-
-/* hover clean */
-.dropdown .dropdown-link:hover {
-  background: rgba(0, 0, 0, 0.05) !important;
-}
-
-.nav-link {
-  padding: 8px 14px;
-  border-radius: 999px;
-  transition: all 0.2s ease;
-  display: inline-block;
-}
-
-/* effet hover */
-.nav-link:hover {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-/* effet actif (optionnel mais 🔥) */
-.nav-link.active {
-  background: linear-gradient(90deg, #ffd700, #ffb800);
-  color: black;
-}
-
+        .menu a {
+          font-size: 16px;
+        }
       `}</style>
     </>
   );
