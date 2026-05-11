@@ -15,6 +15,7 @@ export async function GET(req: Request) {
       cardId: true,
       variant: true,
       quantity: true,
+      isEnglish: true,
     },
   });
 

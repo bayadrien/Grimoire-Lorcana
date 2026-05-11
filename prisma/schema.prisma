@@ -43,8 +43,8 @@ model Collection {
   variant  Variant
   card     Card @relation(fields: [cardId], references: [id])
   user     User        @relation(fields: [userId], references: [id])
-
-  @@unique([userId, cardId, variant])
+  isEnglish Boolean @default(false)
+  @@unique([userId, cardId, variant, isEnglish])
   @@index([cardId], map: "idx_collection_cardid")
   @@index([userId, cardId], map: "idx_collection_user_card")
   @@index([userId, cardId, variant], map: "idx_collection_user_card_variant")

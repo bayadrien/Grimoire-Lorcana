@@ -145,9 +145,6 @@ const filtered = useMemo(() => {
   return (
     <main className="shell">
       <AppHeader
-        title="Grimoire Lorcana"
-        subtitle={`${filtered.length} cartes`}
-        icon="📜"
       />
       {query && (
         <div className="activeFilter">

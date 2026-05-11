@@ -26,11 +26,13 @@ type ColRow = {
   cardId: string;
   variant: "normal" | "foil";
   quantity: number;
+  isEnglish?: boolean;
 };
 
 type ColQty = {
   normal: number;
   foil: number;
+  isEnglish?: boolean;
 };
 
 /* ================= CONST ================= */
@@ -105,8 +107,20 @@ export default function ChapitreDetail() {
       const otherMap: Record<string, ColQty> = {};
 
       mineRows.forEach((r) => {
-        if (!mineMap[r.cardId]) mineMap[r.cardId] = { normal: 0, foil: 0 };
+        if (!mineMap[r.cardId]) {
+          mineMap[r.cardId] = {
+            normal: 0,
+            foil: 0,
+            isEnglish: false,
+          };
+        }
+
         mineMap[r.cardId][r.variant] = r.quantity;
+
+        // 🇬🇧 si au moins une version est anglaise
+        if (r.isEnglish) {
+          mineMap[r.cardId].isEnglish = true;
+        }
       });
 
       otherRows.forEach((r) => {
@@ -259,6 +273,7 @@ console.log("CARD SAMPLE =", cards[0]);
 
       <section className="grid" style={{ marginTop: 12 }}>
         {chapterCards.map((c, index) => {
+          console.log("CARD ID =", c.id, c.name);
           const qtys = collection[c.id] ?? { normal: 0, foil: 0 };
           const total = qtys.normal + qtys.foil;
 
@@ -302,7 +317,6 @@ console.log("CARD SAMPLE =", cards[0]);
                   .join(" ")}
               >
                 <div className="cardMedia">
-                  
                   <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
 
                   <div className="qtyPill unified">
@@ -312,7 +326,12 @@ console.log("CARD SAMPLE =", cards[0]);
 
                     <div className="num">{current}</div>
 
-                    <button onClick={() => setQty(c.id, variant, current + 1)}>
+                    <button
+                      onClick={() => {
+                        console.log("CLICK CARD =", c.id, c.name);
+                        setQty(c.id, variant, current + 1);
+                      }}
+                    >
                       +
                     </button>
 
@@ -331,9 +350,60 @@ console.log("CARD SAMPLE =", cards[0]);
                     </button>
                   </div>
 
-                  <div className="corner">
-                    {total === 0 ? "⬜ 0" : total === 1 ? "✅ OK" : "🎁 Double"}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 10,
+                      right: 10,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      zIndex: 5,
+                    }}
+                  >
+                    {qtys.isEnglish && (
+                      <div
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: "50%",
+                          background: "rgba(255,255,255,.88)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backdropFilter: "blur(6px)",
+                          boxShadow: "0 2px 8px rgba(0,0,0,.18)",
+                          fontSize: 16,
+                          flexShrink: 0,
+                        }}
+                      >
+                        🌍
+                      </div>
+                    )}
+
+                    <div
+                      className={`corner ${
+                        total === 0
+                          ? "missing"
+                          : total === 1
+                          ? "ok"
+                          : "double"
+                      }`}
+                      style={{
+                        position: "relative",
+                        top: 0,
+                        right: 0,
+                        margin: 0,
+                      }}
+                    >
+                      {total === 0
+                        ? "⬜ 0"
+                        : total === 1
+                        ? "✅ OK"
+                        : "🎁 Double"}
+                    </div>
                   </div>
+
 
                   <div className="overlay">
                     <div className="ovTitle">{c.name}</div>
