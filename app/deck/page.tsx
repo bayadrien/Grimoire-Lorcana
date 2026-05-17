@@ -1,257 +1,417 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import AppHeader from "app/components/AppHeader";
+import AppHeader from "../components/AppHeader";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+type Deck = {
+  id: string;
+  name: string;
+  description?: string;
+  inks: string[];
+  createdAt: string;
+};
+
+type User = "adrien" | "angele";
+
+const inkColors: Record<string, string> = {
+  Amber: "#f59e0b",
+  Amethyst: "#a855f7",
+  Emerald: "#10b981",
+  Ruby: "#ef4444",
+  Sapphire: "#3b82f6",
+  Steel: "#6b7280",
+};
+
+const inkIcons: Record<string, string> = {
+  Amber: "🟡",
+  Amethyst: "🟣",
+  Emerald: "🟢",
+  Ruby: "🔴",
+  Sapphire: "🔵",
+  Steel: "⚪",
+};
 
 export default function DeckPage() {
-  const [cards, setCards] = useState<any[]>([]);
-  const [deck, setDeck] = useState<any[]>([]);
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 🔄 LOAD COLLECTION
-    useEffect(() => {
-    fetch("/api/collection?userId=adrien")
-        .then((r) => r.json())
-        .then((data) => {
-        console.log("COLLECTION:", data); // 👈 IMPORTANT
-        setCards(data.data || data || []);
-        });
-    }, []);
+  const [activeUser, setActiveUser] =
+    useState<User>("adrien");
 
-  // 🔐 SAFE CARD FORMAT
-  function normalize(c: any) {
-    const card = c.card || c;
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [inks, setInks] = useState<string[]>([]);
 
-    return {
-      id: card.id,
-      imageUrl:
-        card.imageUrl ||
-        card?.images?.full ||
-        card?.images?.large ||
-        null,
-      ink: card.ink || null,
-      cost: card.cost ?? null,
-      name: card.name || "Unknown",
-    };
+  useEffect(() => {
+    const user =
+      (localStorage.getItem("activeUser") as User) ||
+      "adrien";
+
+    setActiveUser(user);
+
+    fetchDecks(user);
+  }, []);
+
+  async function fetchDecks(user: string) {
+    try {
+      setLoading(true);
+
+      const res = await fetch(
+        `/api/deck?user=${user}`
+      );
+
+      const data = await res.json();
+
+      setDecks(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  // ➕ ADD
-  function addToDeck(raw: any) {
-    const card = normalize(raw);
-    if (!card || !card.id) return;
+  function toggleInk(ink: string) {
+    if (inks.includes(ink)) {
+      setInks(inks.filter((i) => i !== ink));
+      return;
+    }
 
-    const count = deck.filter((c) => c.id === card.id).length;
+    if (inks.length >= 2) return;
 
-    if (count >= 4) return alert("❌ Max 4 copies");
-    if (deck.length >= 60) return alert("❌ Deck plein");
-
-    setDeck([...deck, card]);
+    setInks([...inks, ink]);
   }
 
-  // ➖ REMOVE
-  function removeFromDeck(index: number) {
-    setDeck(deck.filter((_, i) => i !== index));
+  async function createDeck() {
+    if (!name.trim()) return;
+
+    try {
+      const res = await fetch("/api/deck", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          description,
+          inks,
+          userId: activeUser,
+        }),
+      });
+
+      if (!res.ok) {
+        alert("Erreur création deck");
+        return;
+      }
+
+      setName("");
+      setDescription("");
+      setInks([]);
+
+      fetchDecks(activeUser);
+    } catch (error) {
+      console.error(error);
+    }
   }
-
-  // 🧠 ANALYSE
-  const analysis = useMemo(() => {
-    const counts: Record<string, number> = {};
-    const inks = new Set<string>();
-    let costTotal = 0;
-
-    deck.forEach((c) => {
-      counts[c.id] = (counts[c.id] || 0) + 1;
-      if (c.ink) inks.add(c.ink);
-      if (c.cost) costTotal += c.cost;
-    });
-
-    return {
-      total: deck.length,
-      inks: Array.from(inks),
-      tooManyCopies: Object.values(counts).some((n) => n > 4),
-      tooManyInks: inks.size > 2,
-      avgCost: deck.length ? (costTotal / deck.length).toFixed(1) : "0",
-    };
-  }, [deck]);
-
-  // 📊 COURBE
-  const curve = useMemo(() => {
-    const c: Record<number, number> = {};
-
-    deck.forEach((card) => {
-      const cost = card.cost ?? 0;
-      c[cost] = (c[cost] || 0) + 1;
-    });
-
-    return c;
-  }, [deck]);
 
   return (
-    <main className="shell">
-      <AppHeader title="Deck Builder" icon="🃏" />
+    <>
+      <AppHeader />
 
-      {/* 🧠 ANALYSE */}
-      <div className="analysis">
-        <div>🃏 {analysis.total}/60</div>
-        <div>🎨 {analysis.inks.join(", ") || "Aucune"}</div>
-        <div>⚖️ {analysis.avgCost}</div>
+      <main className="min-h-screen bg-gradient-to-b from-[#f8f4eb] via-[#f4efe3] to-[#ebe2d0] pt-28 pb-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          {/* HERO */}
+          <div className="relative overflow-hidden rounded-[40px] p-10 mb-10 bg-white/70 backdrop-blur-xl border border-white/60 shadow-[0_10px_50px_rgba(0,0,0,0.08)]">
+            {/* GLOWS */}
+            <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-yellow-300/20 blur-3xl" />
 
-        {analysis.total < 60 && <div className="warn">⚠️ incomplet</div>}
-        {analysis.tooManyInks && <div className="error">❌ 2 encres max</div>}
-        {analysis.tooManyCopies && <div className="error">❌ 4 copies max</div>}
-      </div>
+            <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-orange-300/10 blur-3xl" />
 
-      {/* 📊 COURBE */}
-      <div className="curve">
-        {Object.entries(curve).map(([cost, count]) => (
-          <div key={cost} className="bar">
-            <span>{cost}</span>
-            <div className="barFill" style={{ height: count * 10 }} />
+            <div className="relative z-10">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                {/* LEFT */}
+                <div>
+                  <div className="flex items-center gap-5">
+                    <div className="w-20 h-20 rounded-[28px] bg-gradient-to-br from-yellow-300 via-amber-300 to-orange-400 flex items-center justify-center text-4xl shadow-[0_10px_30px_rgba(251,191,36,0.4)]">
+                      ⚔️
+                    </div>
+
+                    <div>
+                      <h1 className="text-5xl md:text-6xl font-black tracking-tight text-neutral-900">
+                        Decks Lorcana
+                      </h1>
+
+                      <p className="text-lg text-neutral-500 mt-2">
+                        Construis tes decks et découvre
+                        instantanément les cartes manquantes
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-white shadow-lg border border-white/60">
+                    <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
+
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-neutral-400 font-bold">
+                        Collection active
+                      </p>
+
+                      <p className="font-black text-lg capitalize text-neutral-800">
+                        {activeUser}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT */}
+                <div className="grid grid-cols-3 gap-4 min-w-[280px]">
+                  <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-5 text-center shadow-lg border border-white/60">
+                    <p className="text-4xl font-black text-neutral-900">
+                      {decks.length}
+                    </p>
+
+                    <p className="text-sm text-neutral-500 mt-1">
+                      Decks
+                    </p>
+                  </div>
+
+                  <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-5 text-center shadow-lg border border-white/60">
+                    <p className="text-4xl font-black text-neutral-900">
+                      0
+                    </p>
+
+                    <p className="text-sm text-neutral-500 mt-1">
+                      Jouables
+                    </p>
+                  </div>
+
+                  <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-5 text-center shadow-lg border border-white/60">
+                    <p className="text-4xl font-black text-neutral-900">
+                      0%
+                    </p>
+
+                    <p className="text-sm text-neutral-500 mt-1">
+                      Complété
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
 
-      <div className="layout">
+          {/* CREATE */}
+          <div className="relative overflow-hidden rounded-[40px] bg-white/70 backdrop-blur-xl border border-white/60 p-8 shadow-[0_10px_50px_rgba(0,0,0,0.08)] mb-10">
+            <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-yellow-300/20 blur-3xl" />
 
-        {/* 📚 COLLECTION */}
-        <div className="collection">
-          <h2>Collection</h2>
+            <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full bg-orange-200/20 blur-3xl" />
 
-<div className="grid">
-  {cards.map((c: any, i: number) => {
-    const card = c?.card ?? c;
+            <div className="relative z-10">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-yellow-300 to-orange-400 flex items-center justify-center text-3xl shadow-lg">
+                  ✨
+                </div>
 
-    if (!card) return null;
+                <div>
+                  <h2 className="text-4xl font-black text-neutral-900">
+                    Créer un deck
+                  </h2>
 
-    const img =
-      card?.imageUrl ||
-      card?.card_new?.imageUrl || // 🔥 IMPORTANT
-      card?.images?.full ||
-      card?.images?.large;
+                  <p className="text-neutral-500 mt-1">
+                    Sélectionne jusqu’à 2 encres
+                  </p>
+                </div>
+              </div>
 
-    return (
-      <div key={card.id + "-" + i} className="cardItem">
-        <img
-          src={img || "/placeholder-card.png"}
-          onClick={() => addToDeck(card)}
-        />
+              {/* INPUTS */}
+              <div className="grid lg:grid-cols-2 gap-5">
+                <input
+                  value={name}
+                  onChange={(e) =>
+                    setName(e.target.value)
+                  }
+                  placeholder="Nom du deck"
+                  className="h-16 rounded-3xl px-6 bg-white/80 border border-white/60 shadow-md outline-none focus:ring-4 focus:ring-yellow-200 transition-all text-lg"
+                />
 
-        {c?.quantity && (
-          <div className="qty">x{c.quantity}</div>
-        )}
-      </div>
-    );
-  })}
-</div>
+                <input
+                  value={description}
+                  onChange={(e) =>
+                    setDescription(e.target.value)
+                  }
+                  placeholder="Description"
+                  className="h-16 rounded-3xl px-6 bg-white/80 border border-white/60 shadow-md outline-none focus:ring-4 focus:ring-yellow-200 transition-all text-lg"
+                />
+              </div>
 
-        </div>
+              {/* INKS */}
+              <div className="flex flex-wrap gap-4 mt-8">
+                {Object.entries(inkColors).map(
+                  ([ink, color]) => {
+                    const active =
+                      inks.includes(ink);
 
-        {/* 🃏 DECK */}
-        <div className="deck">
-          <h2>Deck</h2>
+                    return (
+                      <button
+                        key={ink}
+                        onClick={() =>
+                          toggleInk(ink)
+                        }
+                        className={`
+                          px-6 py-3 rounded-full font-black transition-all border-2 shadow-md
+                          ${
+                            active
+                              ? "text-white scale-105 shadow-xl"
+                              : "bg-white/80 text-neutral-700 hover:scale-105"
+                          }
+                        `}
+                        style={{
+                          backgroundColor: active
+                            ? color
+                            : "rgba(255,255,255,0.75)",
+                          borderColor: color,
+                        }}
+                      >
+                        {inkIcons[ink]} {ink}
+                      </button>
+                    );
+                  }
+                )}
+              </div>
 
-          <div className="deckGrid">
-            {deck.map((c, i) => (
-              <img
-                key={c.id + i}
-                src={c.imageUrl}
-                onClick={() => removeFromDeck(i)}
-              />
-            ))}
+              {/* BUTTON */}
+              <button
+                onClick={createDeck}
+                className="mt-10 h-16 px-10 rounded-3xl bg-gradient-to-br from-yellow-300 via-amber-300 to-orange-400 text-black font-black text-xl shadow-[0_10px_30px_rgba(251,191,36,0.45)] hover:scale-[1.02] transition-all"
+              >
+                ✨ Créer le deck
+              </button>
+            </div>
           </div>
+
+          {/* DECKS */}
+          {loading ? (
+            <div className="rounded-[40px] bg-white/70 backdrop-blur-xl border border-white/60 p-16 text-center shadow-[0_10px_50px_rgba(0,0,0,0.08)]">
+              <div className="text-7xl animate-pulse mb-6">
+                📚
+              </div>
+
+              <h2 className="text-3xl font-black text-neutral-900">
+                Chargement des decks...
+              </h2>
+            </div>
+          ) : decks.length === 0 ? (
+            <div className="rounded-[40px] bg-white/70 backdrop-blur-xl border border-white/60 p-16 text-center shadow-[0_10px_50px_rgba(0,0,0,0.08)]">
+              <div className="text-8xl mb-6">
+                🪄
+              </div>
+
+              <h2 className="text-5xl font-black text-neutral-900">
+                Aucun deck créé
+              </h2>
+
+              <p className="text-xl text-neutral-500 mt-4">
+                Crée ton premier deck Lorcana ✨
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-4xl font-black text-neutral-900">
+                    Tes decks
+                  </h2>
+
+                  <p className="text-neutral-500 mt-1">
+                    {decks.length} deck
+                    {decks.length > 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-7">
+                {decks.map((deck) => {
+                  const gradient =
+                    deck.inks.length === 2
+                      ? `linear-gradient(135deg,
+                          ${inkColors[deck.inks[0]]},
+                          ${inkColors[deck.inks[1]]}
+                        )`
+                      : inkColors[deck.inks[0]] ||
+                        "#444";
+
+                  return (
+                    <div
+                      key={deck.id}
+                      className="group relative overflow-hidden rounded-[40px] min-h-[320px] p-8 shadow-[0_15px_50px_rgba(0,0,0,0.18)] hover:scale-[1.02] transition-all duration-300"
+                      style={{
+                        background: gradient,
+                      }}
+                    >
+                      {/* OVERLAY */}
+                      <div className="absolute inset-0 bg-black/20" />
+
+                      {/* GLOWS */}
+                      <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-white/10 blur-3xl" />
+
+                      <div className="absolute bottom-0 left-0 w-52 h-52 rounded-full bg-black/10 blur-3xl" />
+
+                      <div className="relative z-10 h-full flex flex-col">
+                        {/* INKS */}
+                        <div className="flex gap-2 mb-6">
+                          {deck.inks.map((ink) => (
+                            <div
+                              key={ink}
+                              className="px-4 py-2 rounded-full bg-white/20 backdrop-blur-md text-sm font-black text-white border border-white/10"
+                            >
+                              {inkIcons[ink]} {ink}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* TITLE */}
+                        <div className="flex-1">
+                          <h2 className="text-5xl leading-tight font-black text-white">
+                            {deck.name}
+                          </h2>
+
+                          {deck.description && (
+                            <p className="mt-5 text-white/80 leading-relaxed text-lg">
+                              {deck.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* FOOTER */}
+                        <div className="flex items-end justify-between mt-10">
+                          <div>
+                            <p className="text-white/70 text-sm uppercase tracking-wider font-bold">
+                              Progression
+                            </p>
+
+                            <p className="text-5xl font-black text-white">
+                              0%
+                            </p>
+
+                            <p className="text-white/70 mt-1">
+                              Deck vide
+                            </p>
+                          </div>
+                          <Link
+                            href={`/deck/${deck.id}`}
+                            className="h-14 px-7 rounded-2xl bg-white text-black font-black shadow-xl hover:scale-105 transition-all flex items-center"
+                          >
+                            Ouvrir
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
-
-      </div>
-
-<style jsx>{`
-
-.analysis {
-  display: flex;
-  gap: 15px;
-  margin: 15px 0;
-  padding: 10px;
-  background: white;
-  border-radius: 12px;
-}
-
-.warn { color: orange; }
-.error { color: red; }
-
-.curve {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-  height: 100px;
-  margin-bottom: 20px;
-}
-
-.bar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.barFill {
-  width: 16px;
-  background: #6366f1;
-  border-radius: 4px;
-}
-
-.cardItem {
-  position: relative;
-}
-
-.cardItem img {
-  width: 100%;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.cardItem img:hover {
-  transform: scale(1.05);
-}
-
-.qty {
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
-  background: rgba(0,0,0,0.7);
-  color: white;
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 20px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 120px);
-  gap: 12px;
-}
-
-.deckGrid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-}
-
-img {
-  width: 100%;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-img:hover {
-  transform: scale(1.05);
-}
-
-`}</style>
-    </main>
+      </main>
+    </>
   );
 }

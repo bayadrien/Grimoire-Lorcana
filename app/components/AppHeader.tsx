@@ -28,6 +28,7 @@ export default function AppHeader() {
     { href: "/chapitres", label: "Chapitres", icon: "📚" },
     { href: "/stats", label: "Stats", icon: "📊" },
     { href: "/echange", label: "Échange", icon: "🤝" },
+    { href: "/deck", label: "Deck", icon: "🃏" },
     { href: "/opening", label: "Opening", icon: "🎁" },
     { href: "/opening/history", label: "Historique", icon: "📜" },
   ];

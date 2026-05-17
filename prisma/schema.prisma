@@ -12,6 +12,7 @@ model User {
   id          String       @id
   name        String
   collections Collection[]
+  decks Deck[]
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -33,6 +34,7 @@ model Card {
   collections       Collection[]
   trades            Trade[]
   boosterCards      BoosterCard[]
+  deckCards         DeckCard[]
   @@map("Card_new")
 }
 
@@ -87,4 +89,31 @@ model BoosterCard {
 enum Variant {
   normal
   foil
+}
+
+model Deck {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  inks        String[]
+  createdAt   DateTime   @default(now())
+
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+
+  cards       DeckCard[]
+}
+
+model DeckCard {
+  id       String @id @default(cuid())
+
+  deckId   String
+  cardId   String
+
+  quantity Int    @default(1)
+
+  deck      Deck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  card      Card @relation(fields: [cardId], references: [id])
+
+  @@unique([deckId, cardId])
 }

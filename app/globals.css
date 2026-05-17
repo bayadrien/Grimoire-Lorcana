@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root{
   --bg: #fbf6ea;          /* parchemin clair */
   --bg2:#f3ead7;          /* variation */
