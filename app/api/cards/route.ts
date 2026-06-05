@@ -72,8 +72,6 @@ export async function GET(req: Request) {
               : {},
           ],
         },
-
-        take: 60,
       });
 
     return NextResponse.json(

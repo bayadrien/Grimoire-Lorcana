@@ -2,6 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  Radar,
+  BarChart,
+  Bar,
+  XAxis,
+  Tooltip,
+} from "recharts";
+
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 import { tInk } from "@/lib/lorcana-fr";
 import AppHeader from "app/components/AppHeader";
@@ -15,11 +30,17 @@ type Card = {
   setCode?: string | null;
   setName: string;
   ink?: string | null;
+  rarity?: string | null;
+  usd?: number | null;
+  usd_foil?: number | null;
+  name_fr?: string | null;
+  imageUrl?: string | null;
 };
 
 type ColRow = {
   cardId: string;
   quantity: number;
+  variant?: string;
 };
 
 type ChapterStat = {
@@ -38,6 +59,24 @@ type ChapterStat = {
 const pct = (a: number, b: number) =>
   b === 0 ? 0 : Math.round((a / b) * 100);
 
+const euro = (usd?: number | null) =>
+  Number(((usd || 0) * 0.92).toFixed(2));
+
+const chapterImages = [
+  "/chapters/ch1.jpg",
+  "/chapters/ch2.jpg",
+  "/chapters/ch3.jpg",
+  "/chapters/ch4.jpg",
+  "/chapters/ch5.jpg",
+  "/chapters/ch6.jpg",
+  "/chapters/ch7.jpg",
+  "/chapters/ch8.jpg",
+  "/chapters/ch9.jpg",
+  "/chapters/ch10.jpg",
+  "/chapters/ch11.jpg",
+  "/chapters/ch12.jpg",
+];
+
 const badgeForPct = (p: number) => {
   if (p === 100) return "💎 Complet";
   if (p >= 75) return "🥇 Or";
@@ -46,16 +85,36 @@ const badgeForPct = (p: number) => {
   return "🔰 Début";
 };
 
+const COLORS = ["#22c55e", "#e5e7eb"];
+
 /* ============================================================
    PAGE
 ============================================================ */
 
 export default function StatsPage() {
   const [cards, setCards] = useState<Card[]>([]);
-  const [aCol, setACol] = useState<Record<string, number>>({});
-  const [gCol, setGCol] = useState<Record<string, number>>({});
+
+  const [aCol, setACol] = useState<
+    Record<
+      string,
+      {
+        normal: number;
+        foil: number;
+      }
+    >
+  >({});
+
+  const [gCol, setGCol] = useState<
+    Record<
+      string,
+      {
+        normal: number;
+        foil: number;
+      }
+    >
+  >({});
+
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   /* ================= LOAD ================= */
 
@@ -64,24 +123,88 @@ export default function StatsPage() {
       setLoading(true);
 
       const [cardsR, aR, gR] = await Promise.all([
-        fetch("/api/cards", { cache: "no-store" }),
-        fetch("/api/collection?userId=adrien", { cache: "no-store" }),
-        fetch("/api/collection?userId=angele", { cache: "no-store" }),
+        fetch("/api/cards", {
+          cache: "no-store",
+        }),
+
+        fetch(
+          "/api/collection?userId=adrien",
+          {
+            cache: "no-store",
+          }
+        ),
+
+        fetch(
+          "/api/collection?userId=angele",
+          {
+            cache: "no-store",
+          }
+        ),
       ]);
 
-      const cardsData: Card[] = await cardsR.json();
-      const aData: ColRow[] = await aR.json();
-      const gData: ColRow[] = await gR.json();
+      const cardsData: Card[] =
+        await cardsR.json();
 
-      const aMap: Record<string, number> = {};
-      const gMap: Record<string, number> = {};
+      const aData: ColRow[] =
+        await aR.json();
 
-      aData.forEach((r) => (aMap[r.cardId] = (aMap[r.cardId] ?? 0) + r.quantity));
-      gData.forEach((r) => (gMap[r.cardId] = (gMap[r.cardId] ?? 0) + r.quantity));
+      const gData: ColRow[] =
+        await gR.json();
+
+      const aMap: Record<
+        string,
+        {
+          normal: number;
+          foil: number;
+        }
+      > = {};
+
+      const gMap: Record<
+        string,
+        {
+          normal: number;
+          foil: number;
+        }
+      > = {};
+
+      aData.forEach((r) => {
+        if (!aMap[r.cardId]) {
+          aMap[r.cardId] = {
+            normal: 0,
+            foil: 0,
+          };
+        }
+
+        if (r.variant === "foil") {
+          aMap[r.cardId].foil +=
+            r.quantity;
+        } else {
+          aMap[r.cardId].normal +=
+            r.quantity;
+        }
+      });
+
+      gData.forEach((r) => {
+        if (!gMap[r.cardId]) {
+          gMap[r.cardId] = {
+            normal: 0,
+            foil: 0,
+          };
+        }
+
+        if (r.variant === "foil") {
+          gMap[r.cardId].foil +=
+            r.quantity;
+        } else {
+          gMap[r.cardId].normal +=
+            r.quantity;
+        }
+      });
 
       setCards(cardsData);
       setACol(aMap);
       setGCol(gMap);
+
       setLoading(false);
     }
 
@@ -91,39 +214,144 @@ export default function StatsPage() {
   /* ================= GLOBAL ================= */
 
   const global = useMemo(() => {
-    let a = 0,
-      g = 0,
-      duo = 0;
+    let a = 0;
+    let g = 0;
+    let duo = 0;
+
+    let aValue = 0;
+    let gValue = 0;
+
+    let enchanteds = 0;
+    let legendaries = 0;
+
+    let bestCard: any = null;
 
     cards.forEach((c) => {
-      const ah = (aCol[c.id] ?? 0) > 0;
-      const gh = (gCol[c.id] ?? 0) > 0;
+      const ah =
+        (aCol[c.id]?.normal ?? 0) +
+        (aCol[c.id]?.foil ?? 0) > 0;
+
+      const gh =
+        (gCol[c.id]?.normal ?? 0) +
+        (gCol[c.id]?.foil ?? 0) > 0;
+
+      const owned =
+        ah || gh;
+
       if (ah) a++;
       if (gh) g++;
-      if (ah || gh) duo++;
+      if (owned) duo++;
+
+      const normalValue =
+        euro(c.usd);
+
+      const foilValue =
+        euro(c.usd_foil);
+
+      const aNormal =
+        aCol[c.id]?.normal ?? 0;
+
+      const aFoil =
+        aCol[c.id]?.foil ?? 0;
+
+      const gNormal =
+        gCol[c.id]?.normal ?? 0;
+
+      const gFoil =
+        gCol[c.id]?.foil ?? 0;
+
+      aValue +=
+        normalValue * aNormal +
+        foilValue * aFoil;
+
+      gValue +=
+        normalValue * gNormal +
+        foilValue * gFoil;
+
+      if (owned) {
+        if (c.rarity === "ENCHANTED") {
+          enchanteds++;
+        }
+
+        if (c.rarity === "LEGENDARY") {
+          legendaries++;
+        }
+      }
+
+      const value = Math.max(
+        normalValue,
+        foilValue
+      );
+
+      if (
+        owned &&
+        (
+          !bestCard ||
+          value >
+            Math.max(
+              euro(bestCard.usd),
+              euro(bestCard.usd_foil)
+            )
+        )
+      ) {
+        bestCard = c;
+      }
     });
 
     return {
       total: cards.length,
+
       a,
       g,
       duo,
-      pct: pct(duo, cards.length),
+
+      pct: pct(
+        duo,
+        cards.length
+      ),
+
+      aValue:
+        Math.round(aValue),
+
+      gValue:
+        Math.round(gValue),
+
+      duoValue: Math.round(
+        aValue + gValue
+      ),
+
+      enchanteds,
+      legendaries,
+
+      bestCard,
     };
   }, [cards, aCol, gCol]);
 
   /* ================= CHAPTERS ================= */
 
   const chapters = useMemo(() => {
-    const map = new Map<string, ChapterStat>();
+    const map = new Map<
+      string,
+      ChapterStat
+    >();
 
     cards.forEach((c) => {
-      if (!c.setCode || !/^\d+$/.test(c.setCode)) return;
+      if (
+        !c.setCode ||
+        !/^\d+$/.test(c.setCode)
+      )
+        return;
 
       if (!map.has(c.setCode)) {
         map.set(c.setCode, {
           code: c.setCode,
-          name: CHAPTERS_NAMES_FR[c.setCode] ?? `Chapitre ${c.setCode}`,
+
+          name:
+            CHAPTERS_NAMES_FR[
+              c.setCode
+            ] ??
+            `Chapitre ${c.setCode}`,
+
           total: 0,
           aOwned: 0,
           gOwned: 0,
@@ -131,493 +359,488 @@ export default function StatsPage() {
         });
       }
 
-      const row = map.get(c.setCode)!;
+      const row = map.get(
+        c.setCode
+      )!;
+
       row.total++;
 
-      const ah = (aCol[c.id] ?? 0) > 0;
-      const gh = (gCol[c.id] ?? 0) > 0;
+      const ah =
+        (aCol[c.id]?.normal ?? 0) +
+        (aCol[c.id]?.foil ?? 0) > 0;
 
-      if (ah) row.aOwned++;
-      if (gh) row.gOwned++;
-      if (ah || gh) row.duoOwned++;
+      const gh =
+        (gCol[c.id]?.normal ?? 0) +
+        (gCol[c.id]?.foil ?? 0) > 0;
+
+      if (ah)
+        row.aOwned++;
+
+      if (gh)
+        row.gOwned++;
+
+      if (ah || gh)
+        row.duoOwned++;
     });
 
-    return [...map.values()].sort((a, b) => Number(a.code) - Number(b.code));
+    return [...map.values()].sort(
+      (a, b) =>
+        Number(a.code) -
+        Number(b.code)
+    );
   }, [cards, aCol, gCol]);
 
-  /* ================= INKS ================= */
+  /* ================= CHARTS ================= */
 
-  const inks = useMemo(() => {
-    const map: Record<string, { a: number; g: number }> = {};
+  const pieData = [
+    {
+      name: "Complété",
+      value: global.pct,
+    },
+    {
+      name: "Manquant",
+      value: 100 - global.pct,
+    },
+  ];
+
+  const radarData = useMemo(() => {
+    const map: Record<
+      string,
+      number
+    > = {};
 
     cards.forEach((c) => {
       if (!c.ink) return;
-      if (!map[c.ink]) map[c.ink] = { a: 0, g: 0 };
-      if ((aCol[c.id] ?? 0) > 0) map[c.ink].a++;
-      if ((gCol[c.id] ?? 0) > 0) map[c.ink].g++;
+
+      const owned =
+        (aCol[c.id]?.normal ?? 0) +
+        (aCol[c.id]?.foil ?? 0) > 0 ||
+        (gCol[c.id]?.normal ?? 0) +
+        (gCol[c.id]?.foil ?? 0) > 0;
+
+      if (!owned) return;
+
+      map[c.ink] =
+        (map[c.ink] ?? 0) + 1;
     });
 
-    return map;
+    return Object.entries(map).map(
+      ([ink, value]) => ({
+        ink: tInk(ink),
+        value,
+      })
+    );
   }, [cards, aCol, gCol]);
 
-  /* ================= RENDER ================= */
+  const barData = chapters.map(
+    (c) => ({
+      name: c.code,
+
+      progress: pct(
+        c.duoOwned,
+        c.total
+      ),
+    })
+  );
+
+  /* ================= LOADING ================= */
+
+  if (loading) {
+    return (
+      <>
+        <AppHeader />
+
+        <main className="min-h-screen bg-[#f8f4eb] flex items-center justify-center">
+          <div className="rounded-[32px] bg-white px-10 py-8 shadow-xl text-center">
+            <div className="text-6xl mb-4 animate-pulse">
+              ✨
+            </div>
+
+            <p className="text-2xl font-black">
+              Chargement des statistiques...
+            </p>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
-    <main className="shell">
-      <AppHeader
-        title="Statistiques"
-        subtitle="Adrien VS Angèle"
-        icon="📜"
-      />
-      {/* ================= GLOBAL ================= */}
+    <>
+      <AppHeader />
 
-      <section className="global">
-        <div className="globalCard duo">
-          <div className="label">Progression DUO</div>
-          <div className="value">{global.pct}%</div>
-          <div className="sub">
-            {global.duo} / {global.total}
+      <main className="min-h-screen bg-[#f8f4eb] pt-24 pb-16 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col gap-6">
+
+          {/* HERO */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-[40px] p-8 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 shadow-[0_20px_60px_rgba(0,0,0,0.15)]"
+          >
+            <div className="absolute inset-0 bg-black/10" />
+
+            <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-white/10 blur-3xl" />
+
+            <div className="relative z-10 grid xl:grid-cols-2 gap-8 items-center">
+              <div>
+                <p className="uppercase tracking-[0.3em] text-white/70 text-sm font-black mb-3">
+                  Collection Lorcana
+                </p>
+
+                <h1 className="text-6xl md:text-7xl font-black text-white leading-none">
+                  {global.pct}%
+                </h1>
+
+                <p className="text-white/80 text-xl mt-4 max-w-xl">
+                  {global.duo} cartes collectionnées ✨
+                </p>
+
+                <div className="flex flex-wrap gap-3 mt-6">
+                  <div className="px-5 py-3 rounded-2xl bg-white/15 backdrop-blur-xl text-white font-black">
+                    👑 {global.legendaries} légendaires
+                  </div>
+
+                  <div className="px-5 py-3 rounded-2xl bg-white/15 backdrop-blur-xl text-white font-black">
+                    ✨ {global.enchanteds} enchantées
+                  </div>
+
+                  <div className="px-5 py-3 rounded-2xl bg-white/15 backdrop-blur-xl text-white font-black">
+                    📚 {chapters.length} chapitres
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-[28px] bg-white/15 backdrop-blur-xl p-6 border border-white/10">
+                  <p className="text-white/60 text-sm uppercase font-black">
+                    Valeur totale
+                  </p>
+
+                  <p className="text-5xl font-black text-white mt-3">
+                    {global.duoValue}€
+                  </p>
+                </div>
+
+                <div className="rounded-[28px] bg-white/15 backdrop-blur-xl p-4 border border-white/10 flex gap-4 items-center min-h-[170px]">
+  
+                  {global.bestCard?.imageUrl && (
+                    <img
+                      src={global.bestCard.imageUrl}
+                      alt={global.bestCard.name_fr || ""}
+                      className="w-24 rounded-2xl shadow-2xl border border-white/20"
+                    />
+                  )}
+
+                  <div className="flex flex-col justify-center">
+                    <p className="text-white/60 text-xs uppercase font-black">
+                      Carte la plus chère
+                    </p>
+
+                    <p className="text-2xl font-black text-white leading-tight mt-2">
+                      {global.bestCard?.name_fr || "Aucune"}
+                    </p>
+
+                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-black/20 text-white font-black text-lg w-fit">
+                      💰
+                      {Math.max(
+                        euro(global.bestCard?.usd),
+                        euro(global.bestCard?.usd_foil)
+                      )}€
+                    </div>
+
+                    {global.bestCard?.usd_foil &&
+                      global.bestCard.usd_foil >
+                        global.bestCard.usd && (
+                        <div className="mt-2 text-sm font-black text-yellow-200">
+                          ✨ Version foil
+                        </div>
+                      )}
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] bg-white/15 backdrop-blur-xl p-6 border border-white/10">
+                  <p className="text-white/60 text-sm uppercase font-black">
+                    Adrien
+                  </p>
+
+                  <p className="text-4xl font-black text-white mt-3">
+                    {global.aValue}€
+                  </p>
+                </div>
+
+                <div className="rounded-[28px] bg-white/15 backdrop-blur-xl p-6 border border-white/10">
+                  <p className="text-white/60 text-sm uppercase font-black">
+                    Angèle
+                  </p>
+
+                  <p className="text-4xl font-black text-white mt-3">
+                    {global.gValue}€
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* QUICK STATS */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-5">
+            {[
+              ["📦", global.duo, "Cartes"],
+              ["👑", global.legendaries, "Légendaires"],
+              ["✨", global.enchanteds, "Enchantées"],
+              ["💰", `${global.duoValue}€`, "Valeur"],
+            ].map(([icon, value, label]) => (
+              <motion.div
+                whileHover={{ y: -4 }}
+                key={String(label)}
+                className="rounded-[32px] bg-white border border-black/10 p-6 shadow-lg"
+              >
+                <div className="text-4xl">
+                  {icon}
+                </div>
+
+                <p className="text-5xl font-black mt-5">
+                  {value}
+                </p>
+
+                <p className="text-neutral-500 mt-2 font-medium">
+                  {label}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* CHARTS */}
+          <div className="grid xl:grid-cols-3 gap-5">
+
+            {/* DONUT */}
+            <div className="rounded-[32px] bg-white border border-black/10 p-6 shadow-lg">
+              <h2 className="text-2xl font-black mb-5">
+                🎯 Progression
+              </h2>
+
+              <div className="h-[260px]">
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      innerRadius={70}
+                      outerRadius={100}
+                      dataKey="value"
+                    >
+                      {pieData.map(
+                        (_, index) => (
+                          <Cell
+                            key={index}
+                            fill={
+                              COLORS[
+                                index
+                              ]
+                            }
+                          />
+                        )
+                      )}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <p className="text-center text-5xl font-black -mt-8">
+                {global.pct}%
+              </p>
+            </div>
+
+            {/* RADAR */}
+            <div className="rounded-[32px] bg-white border border-black/10 p-6 shadow-lg">
+              <h2 className="text-2xl font-black mb-5">
+                🌈 Encres
+              </h2>
+
+              <div className="h-[260px]">
+                <ResponsiveContainer>
+                  <RadarChart data={radarData}>
+                    <PolarGrid />
+
+                    <PolarAngleAxis dataKey="ink" />
+
+                    <Radar
+                      dataKey="value"
+                      fill="#f59e0b"
+                      fillOpacity={0.6}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* BAR */}
+            <div className="rounded-[32px] bg-white border border-black/10 p-6 shadow-lg">
+              <h2 className="text-2xl font-black mb-5">
+                📚 Chapitres
+              </h2>
+
+              <div className="h-[260px]">
+                <ResponsiveContainer>
+                  <BarChart data={barData}>
+                    <XAxis dataKey="name" />
+
+                    <Tooltip />
+
+                    <Bar
+                      dataKey="progress"
+                      radius={[10, 10, 0, 0]}
+                      fill="#22c55e"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* CHAPTERS */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-4xl font-black">
+                  📖 Chapitres
+                </h2>
+
+                <p className="text-neutral-500 mt-1">
+                  Progression complète Lorcana
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
+              {chapters.map((chapter) => {
+                const progress = pct(
+                  chapter.duoOwned,
+                  chapter.total
+                );
+
+                return (
+                  <motion.div
+                    whileHover={{ y: -5 }}
+                    key={chapter.code}
+                    className="group relative overflow-hidden rounded-[32px] bg-white border border-black/10 shadow-lg"
+                  >
+                    <div className="relative h-[180px] overflow-hidden">
+                      <img
+                        src={
+                          chapterImages[
+                            Number(
+                              chapter.code
+                            ) - 1
+                          ]
+                        }
+                        alt={chapter.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500"
+                      />
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <p className="text-white/70 text-sm font-black">
+                          Chapitre {chapter.code}
+                        </p>
+
+                        <h3 className="text-white text-2xl font-black leading-tight">
+                          {chapter.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="font-black text-neutral-800">
+                          Progression
+                        </p>
+
+                        <p className="text-2xl font-black">
+                          {progress}%
+                        </p>
+                      </div>
+
+                      <div className="h-3 rounded-full bg-neutral-200 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-green-500"
+                          style={{
+                            width: `${progress}%`,
+                          }}
+                        />
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="px-3 py-2 rounded-2xl bg-neutral-100 text-sm font-black">
+                          {badgeForPct(
+                            progress
+                          )}
+                        </div>
+
+                        <div className="text-sm font-black text-neutral-500">
+                          {chapter.duoOwned}/
+                          {chapter.total}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* OBJECTIFS */}
+          <div className="rounded-[32px] bg-gradient-to-br from-neutral-900 to-black p-8 text-white shadow-2xl">
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-8">
+              <div>
+                <p className="uppercase tracking-[0.3em] text-white/50 text-sm font-black mb-3">
+                  Objectifs
+                </p>
+
+                <h2 className="text-5xl font-black leading-none">
+                  🎯 Prochaine étape
+                </h2>
+
+                <p className="text-white/70 text-xl mt-4">
+                  Plus que {global.total - global.duo} cartes avant le 100% ✨
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-[420px]">
+                <div className="rounded-[28px] bg-white/10 backdrop-blur-xl p-5">
+                  <p className="text-white/60 text-sm font-black">
+                    Cartes manquantes
+                  </p>
+
+                  <p className="text-5xl font-black mt-3">
+                    {global.total - global.duo}
+                  </p>
+                </div>
+
+                <div className="rounded-[28px] bg-white/10 backdrop-blur-xl p-5">
+                  <p className="text-white/60 text-sm font-black">
+                    Progression
+                  </p>
+
+                  <p className="text-5xl font-black mt-3">
+                    {global.pct}%
+                  </p>
+                </div>
+
+                <div className="rounded-[28px] bg-white/10 backdrop-blur-xl p-5">
+                  <p className="text-white/60 text-sm font-black">
+                    Valeur totale
+                  </p>
+
+                  <p className="text-5xl font-black mt-3">
+                    {global.duoValue}€
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="globalCard adrien">
-          <div className="label">Adrien</div>
-          <div className="value">{global.a}</div>
-        </div>
-
-        <div className="globalCard angele">
-          <div className="label">Angèle</div>
-          <div className="value">{global.g}</div>
-        </div>
-      </section>
-
-      {/* ================= MAP ================= */}
-
-      <section className="map">
-        <h2>🗺️ Carte de progression Lorcana</h2>
-
-        <svg viewBox="0 0 1200 260" className="lorcanaMap">
-          {/* Ligne principale */}
-          <line
-            x1="80"
-            y1="130"
-            x2="1120"
-            y2="130"
-            stroke="#cfd8e3"
-            strokeWidth="6"
-            strokeLinecap="round"
-          />
-
-          {chapters.map((c, i) => {
-            const dPct = pct(c.duoOwned, c.total);
-            const x = 100 + i * 95;
-
-            return (
-              <motion.g
-                key={c.code}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-              >
-                {/* Cercle chapitre */}
-                <circle
-                  cx={x}
-                  cy={130}
-                  r={28}
-                  fill={`hsl(${120 * (dPct / 100)}, 70%, 55%)`}
-                  stroke="#ffffff"
-                  strokeWidth="4"
-                />
-
-                {/* Numéro */}
-                <text
-                  x={x}
-                  y={136}
-                  textAnchor="middle"
-                  fontSize="16"
-                  fontWeight="900"
-                  fill="#1f2937"
-                >
-                  {c.code}
-                </text>
-
-                {/* Pourcentage */}
-                <text
-                  x={x}
-                  y={175}
-                  textAnchor="middle"
-                  fontSize="13"
-                  fontWeight="700"
-                  fill="#4b5563"
-                >
-                  {dPct}%
-                </text>
-
-                {/* Nom */}
-                <text
-                  x={x}
-                  y={200}
-                  textAnchor="middle"
-                  fontSize="11"
-                  fill="#6b7280"
-                >
-                  {c.name}
-                </text>
-              </motion.g>
-            );
-          })}
-        </svg>
-      </section>
-
-
-      {/* ================= CHAPTERS ================= */}
-
-      <section className="chapters">
-        <h2>📚 Chapitres</h2>
-
-        {chapters.map((c, i) => {
-          const aPct = pct(c.aOwned, c.total);
-          const gPct = pct(c.gOwned, c.total);
-          const dPct = pct(c.duoOwned, c.total);
-
-          const champion =
-            aPct === gPct ? "🤝" : aPct > gPct ? "Adrien 👑" : "Angèle 👑";
-
-          return (
-            <motion.div
-              key={c.code}
-              className="chapterRow"
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-            >
-              <div className="chapterHead">
-                <div>
-                  <div className="chapterTitle">
-                    Chapitre {c.code} – {c.name}
-                  </div>
-                  <div className="badge">{badgeForPct(dPct)}</div>
-                </div>
-                <div className="champion">{champion}</div>
-              </div>
-
-              <div className="chapterBars">
-
-                <div className="barRow">
-                  <span className="barLabel adrien">Adrien</span>
-                  <div className="barTrack">
-                    <div
-                      className="barFill adrien"
-                      style={{ width: `${pct(c.aOwned, c.total)}%` }}
-                    />
-                  </div>
-                  <span className="barValue">
-                    {pct(c.aOwned, c.total)}%
-                  </span>
-                </div>
-
-                <div className="barRow">
-                  <span className="barLabel angele">Angèle</span>
-                  <div className="barTrack">
-                    <div
-                      className="barFill angele"
-                      style={{ width: `${pct(c.gOwned, c.total)}%` }}
-                    />
-                  </div>
-                  <span className="barValue">
-                    {pct(c.gOwned, c.total)}%
-                  </span>
-                </div>
-
-                <div className="barRow">
-                  <span className="barLabel duo">Duo</span>
-                  <div className="barTrack">
-                    <div
-                      className="barFill duo"
-                      style={{ width: `${pct(c.duoOwned, c.total)}%` }}
-                    />
-                  </div>
-                  <span className="barValue">
-                    {pct(c.duoOwned, c.total)}%
-                  </span>
-                </div>
-
-              </div>
-
-            </motion.div>
-          );
-        })}
-      </section>
-
-      {/* ================= INKS ================= */}
-
-      <section className="inks">
-        <h2>🎨 Encres</h2>
-
-        {Object.entries(inks).map(([k, v]) => {
-          const total = v.a + v.g;
-          return (
-            <div key={k} className="inkRow">
-              <span>{tInk(k)}</span>
-              <span>
-                Adrien {v.a} / Angèle {v.g} • {total}
-              </span>
-            </div>
-          );
-        })}
-      </section>
-
-      {/* ================= STYLES ================= */}
-
-      <style jsx>{`
-        .global {
-          display: grid;zz
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 16px;
-          margin: 20px 0;
-        }
-
-        .globalCard {
-          border-radius: 18px;
-          padding: 18px;
-          background: linear-gradient(135deg, #fff, #f4f7fb);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        }
-
-        .globalCard.duo {
-          background: linear-gradient(135deg, #d4fc79, #96e6a1);
-        }
-
-        .globalCard.adrien {
-          background: linear-gradient(135deg, #cfd9df, #e2ebf0);
-        }
-
-        .globalCard.angele {
-          background: linear-gradient(135deg, #fbc8d4, #fcdde5);
-        }
-
-        .label {
-          font-weight: 700;
-          opacity: 0.7;
-        }
-
-        .value {
-          font-size: 36px;
-          font-weight: 900;
-        }
-
-        .map {
-          margin: 48px 0 64px;
-          padding: 36px 40px 42px;
-          border-radius: 32px;
-
-          background:
-            radial-gradient(
-              circle at top,
-              #ffffff 0%,
-              #f3f6fb 45%,
-              #e9eef7 100%
-            );
-
-          box-shadow:
-            0 25px 60px rgba(0,0,0,0.12),
-            inset 0 1px 0 rgba(255,255,255,0.95);
-
-          border: 1px solid rgba(255,255,255,0.6);
-        }
-
-        <div className="sectionSeparator">
-          <span />
-        </div>
-
-        .sectionSeparator {
-          margin: 20px 0 50px;
-          display: flex;
-          justify-content: center;
-        }
-
-        .sectionSeparator span {
-          width: 140px;
-          height: 6px;
-          border-radius: 999px;
-          background: linear-gradient(
-            90deg,
-            rgba(0,0,0,0),
-            rgba(0,0,0,0.18),
-            rgba(0,0,0,0)
-          );
-        }
-
-        .chapters {
-          margin-top: 48px;
-          display: flex;
-          flex-direction: column;
-          gap: 34px; /* 🔑 ESPACEMENT ENTRE CHAPITRES */
-        }
-
-        .chapterRow {
-          background:
-            linear-gradient(180deg, #ffffff, #f5f7fb);
-
-          border-radius: 26px;
-          padding: 26px 28px 30px;
-
-          box-shadow:
-            0 18px 45px rgba(0,0,0,0.10),
-            inset 0 1px 0 rgba(255,255,255,0.95);
-
-          border: 1px solid rgba(0,0,0,0.06);
-
-          transition: transform 0.25s ease, box-shadow 0.25s ease;
-        }
-
-        .chapterRow:hover {
-          transform: translateY(-4px);
-          box-shadow:
-            0 25px 60px rgba(0,0,0,0.16);
-        }
-
-        .chapterHead {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .chapterTitle {
-          font-weight: 800;
-        }
-
-        .badge {
-          margin-top: 4px;
-          font-size: 13px;
-          opacity: 0.8;
-        }
-
-        .bars {
-          margin-top: 12px;
-          display: grid;
-          gap: 6px;
-        }
-
-        .bar {
-          position: relative;
-          height: 8px;
-          border-radius: 999px;
-          background: rgba(0, 0, 0, 0.1);
-        }
-
-        .bar span {
-          position: absolute;
-          height: 100%;
-          border-radius: 999px;
-        }
-
-        .bar.adrien span {
-          background: linear-gradient(90deg, #74ebd5, #9face6);
-        }
-
-        .bar.duo span {
-          background: linear-gradient(90deg, #43e97b, #38f9d7);
-        }
-
-        .bar.angele span {
-          background: linear-gradient(90deg, #fa709a, #fee140);
-        }
-
-        .bar label {
-          position: absolute;
-          right: 0;
-          top: -18px;
-          font-size: 12px;
-          opacity: 0.7;
-        }
-
-        .inks {
-          margin-top: 40px;
-        }
-
-        .inkRow {
-          display: flex;
-          justify-content: space-between;
-          padding: 10px 14px;
-          border-radius: 12px;
-          background: #f6f8fb;
-          margin-bottom: 6px;
-        }
-
-        .lorcanaMap {
-          margin-top: 24px;
-          width: 100%;
-          overflow: visible;
-        }
-
-        .map {
-          margin: 40px 0;
-          padding: 26px 24px 32px;
-          border-radius: 26px;
-          background: linear-gradient(135deg, #f8fafc, #eef2f7);
-          box-shadow:
-            inset 0 1px 0 rgba(255,255,255,0.9),
-            0 10px 30px rgba(0,0,0,0.08);
-        }
-
-        .chapterBars {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-top: 18px;
-        }
-
-        .barRow {
-          display: grid;
-          grid-template-columns: 70px 1fr 48px;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .barLabel {
-          font-size: 13px;
-          font-weight: 700;
-          opacity: 0.9;
-        }
-
-        .barLabel.adrien { color: #4f7cff; }
-        .barLabel.angele { color: #b57cff; }
-        .barLabel.duo    { color: #2ecc71; }
-
-        .barTrack {
-          height: 10px;
-          background: rgba(0,0,0,0.08);
-          border-radius: 999px;
-          overflow: hidden;
-        }
-
-        .barFill {
-          height: 100%;
-          border-radius: 999px;
-          transition: width 0.5s ease;
-        }
-
-        .barFill.adrien {
-          background: linear-gradient(90deg, #4f7cff, #6fa0ff);
-        }
-
-        .barFill.angele {
-          background: linear-gradient(90deg, #b57cff, #d3a6ff);
-        }
-
-        .barFill.duo {
-          background: linear-gradient(90deg, #2ecc71, #6ee7a8);
-        }
-
-        .barValue {
-          font-size: 12px;
-          font-weight: 700;
-          text-align: right;
-          opacity: 0.85;
-        }
-
-      `}</style>
-    </main>
+      </main>
+    </>
   );
 }
