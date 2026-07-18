@@ -22,6 +22,7 @@ const chapters: Chapter[] = [
   { id: 10, image: "/chapters/ch10.jpg" },
   { id: 11, image: "/chapters/ch11.jpg" },
   { id: 12, image: "/chapters/ch12.jpg" },
+  { id: 13, image: "/chapters/ch13.jpg" },
 ];
 
 const boostersByChapter: Record<number, string[]> = {
@@ -37,6 +38,7 @@ const boostersByChapter: Record<number, string[]> = {
   10: ["/boosters/ch10-1.jpg", "/boosters/ch10-2.jpg", "/boosters/ch10-3.jpg"],
   11: ["/boosters/ch11-1.jpg", "/boosters/ch11-2.jpg", "/boosters/ch11-3.jpg"],
   12: ["/boosters/ch12-1.jpg", "/boosters/ch12-2.jpg", "/boosters/ch12-3.jpg"],
+  13: ["/boosters/ch13-1.jpg", "/boosters/ch13-2.jpg", "/boosters/ch13-3.jpg"],
 };
 
 export default function OpeningPage() {
