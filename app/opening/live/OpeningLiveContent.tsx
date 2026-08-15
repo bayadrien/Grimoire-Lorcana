@@ -274,28 +274,51 @@ const progress = (cards.length / 12) * 100;
         if (loading) return;
         setLoading(true);
 
-        const userId = localStorage.getItem("activeUser") || "adrien";
+        try {
+          const userId = localStorage.getItem("activeUser") || "adrien";
 
-        await fetch("/api/collection/addBooster", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, cards }),
-        });
+          const collectionRes = await fetch("/api/collection/addBooster", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, cards }),
+          });
 
-        const res = await fetch("/api/booster/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId,
-            chapter,
-            boosterImage,
-            cards,
-          }),
-        });
+          const collectionData = await collectionRes.json();
 
-        const data = await res.json();
+          if (!collectionRes.ok || !collectionData.ok) {
+            throw new Error(
+              collectionData.error || "Impossible d'ajouter les cartes à la collection."
+            );
+          }
 
-        window.location.href = `/opening/result?id=${data.id}`;
+          const res = await fetch("/api/booster/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId,
+              chapter,
+              boosterImage,
+              cards,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok || !data.id) {
+            throw new Error(data.error || "Impossible d'enregistrer le booster.");
+          }
+
+          window.location.href = `/opening/result?id=${data.id}`;
+        } catch (error) {
+          console.error("OPENING SAVE ERROR =", error);
+          alert(
+            error instanceof Error
+              ? error.message
+              : "Une erreur est survenue pendant l'enregistrement du booster."
+          );
+        } finally {
+          setLoading(false);
+        }
       }}
     >
       🎉 Terminer le booster

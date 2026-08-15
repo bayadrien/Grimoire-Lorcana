@@ -1,3 +1,21 @@
+/*
+  ==========================================================
+  MISE À JOUR DES PRIX LORCANA
+  ==========================================================
+
+  Pour lancer la synchronisation, ouvre un terminal dans le
+  dossier du projet puis exécute :
+
+    npx ts-node scripts/syncPrices.ts
+
+  Le script récupère les prix normaux et foil depuis Lorcast,
+  puis met à jour les colonnes `usd` et `usd_foil` des cartes.
+  Il ne modifie pas la collection ni les boosters ouverts.
+
+  Prérequis : être connecté à Internet et garder le fichier
+  `.env` du projet (il contient la connexion à la base).
+*/
+
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
