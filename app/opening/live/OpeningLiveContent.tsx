@@ -19,8 +19,10 @@ type Card = {
   confidence?: number;
 };
 
-type DetectedText = { rawValue: string };
-type BrowserTextDetector = { detect: (source: CanvasImageSource) => Promise<DetectedText[]> };
+type OcrWorker = {
+  recognize: (image: HTMLCanvasElement) => Promise<{ data: { text: string } }>;
+  terminate: () => Promise<void>;
+};
 
 export default function OpeningLiveContent() {
   const params = useSearchParams();
@@ -36,8 +38,10 @@ export default function OpeningLiveContent() {
   const [scanStatus, setScanStatus] = useState("");
   const [scanText, setScanText] = useState({ number: "", name: "" });
   const [scanSuggestions, setScanSuggestions] = useState<Card[]>([]);
+  const [capturePreview, setCapturePreview] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const ocrWorkerRef = useRef<OcrWorker | null>(null);
 
   const [collection, setCollection] = useState<Record<string, number>>({});
   const [otherCollection, setOtherCollection] = useState<Record<string, number>>({});
@@ -83,7 +87,10 @@ const progress = (cards.length / 12) * 100;
   }, []);
 
   useEffect(() => {
-    return () => streamRef.current?.getTracks().forEach((track) => track.stop());
+    return () => {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      if (ocrWorkerRef.current) void ocrWorkerRef.current.terminate();
+    };
   }, []);
 
   async function openScanner() {
@@ -112,10 +119,8 @@ const progress = (cards.length / 12) * 100;
       streamRef.current = stream;
       setScanSuggestions([]);
       setScanText({ number: "", name: "" });
-      const hasNativeOcr = Boolean((window as unknown as { TextDetector?: unknown }).TextDetector);
-      setScanStatus(hasNativeOcr
-        ? "Cadre la carte entière, puis prends la photo."
-        : "Caméra ouverte. Safari ne permet pas encore la lecture automatique ici : utilise la saisie manuelle après la photo.");
+      setCapturePreview("");
+      setScanStatus("Caméra prête. Cadre la carte entière, puis prends la photo.");
     } catch (error) {
       const message = error instanceof DOMException && error.name === "NotAllowedError"
         ? "Autorise l'accès à l'appareil photo dans les réglages de Safari, puis réessaie."
@@ -130,7 +135,16 @@ const progress = (cards.length / 12) * 100;
     setScannerOpen(false);
   }
 
-  async function readCrop(canvas: HTMLCanvasElement, source: HTMLVideoElement, top: number, height: number) {
+  async function getOcrWorker() {
+    if (!ocrWorkerRef.current) {
+      setScanStatus("Préparation du lecteur de texte… la première fois peut prendre quelques secondes.");
+      const { createWorker } = await import("tesseract.js");
+      ocrWorkerRef.current = await createWorker("eng") as unknown as OcrWorker;
+    }
+    return ocrWorkerRef.current;
+  }
+
+  async function readCrop(worker: OcrWorker, canvas: HTMLCanvasElement, source: HTMLVideoElement, top: number, height: number) {
     const context = canvas.getContext("2d");
     if (!context) return "";
     canvas.width = source.videoWidth;
@@ -138,32 +152,43 @@ const progress = (cards.length / 12) * 100;
     context.filter = "grayscale(1) contrast(2)";
     context.drawImage(source, 0, source.videoHeight * top, source.videoWidth, source.videoHeight * height, 0, 0, canvas.width, canvas.height);
     context.filter = "none";
-    const TextDetector = (window as unknown as { TextDetector?: new () => BrowserTextDetector }).TextDetector;
-    if (!TextDetector) return "";
-    const blocks = await new TextDetector().detect(canvas);
-    return blocks.map((block) => block.rawValue).join(" ");
+    const { data } = await worker.recognize(canvas);
+    return data.text.replace(/\s+/g, " ").trim();
   }
 
   async function captureAndScan() {
     const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
-    setScanStatus("Lecture du numéro et du nom…");
+    if (!video || !video.videoWidth) {
+      setScanStatus("La caméra n'est pas encore prête. Attends une seconde, puis réessaie.");
+      return;
+    }
+    setScanSuggestions([]);
+    setScanStatus("Photo prise. Lecture de la carte en cours…");
     try {
-      const [name, number] = await Promise.all([
-        readCrop(document.createElement("canvas"), video, 0, 0.28),
-        readCrop(document.createElement("canvas"), video, 0.72, 0.28),
-      ]);
+      const preview = document.createElement("canvas");
+      preview.width = video.videoWidth;
+      preview.height = video.videoHeight;
+      preview.getContext("2d")?.drawImage(video, 0, 0);
+      setCapturePreview(preview.toDataURL("image/jpeg", 0.82));
+
+      const worker = await getOcrWorker();
+      setScanStatus("Photo prise. Lecture du numéro de collection…");
+      const number = await readCrop(worker, document.createElement("canvas"), video, 0.68, 0.32);
+      setScanStatus("Photo prise. Lecture du nom de la carte…");
+      const name = await readCrop(worker, document.createElement("canvas"), video, 0, 0.34);
       if (!number && !name) {
-        setScanStatus("OCR indisponible ou texte non lu. Essaie avec plus de lumière, ou utilise la saisie manuelle.");
+        setScanStatus("La photo a été prise, mais aucun texte n'a été lu. Essaie avec plus de lumière et cadre mieux le haut et le bas de la carte.");
         return;
       }
       setScanText({ number, name });
+      setInput(number || name);
+      setScanStatus("Recherche parmi les cartes du chapitre…");
       const response = await fetch(`/api/cards/scan?chapter=${encodeURIComponent(chapter)}&number=${encodeURIComponent(number)}&name=${encodeURIComponent(name)}`);
       const found = await response.json();
       setScanSuggestions(Array.isArray(found) ? found : []);
-      setScanStatus(Array.isArray(found) && found.length ? "Choisis la carte détectée avant de l'ajouter." : "Aucune carte sûre. Ajuste le cadrage ou utilise la saisie manuelle.");
+      setScanStatus(Array.isArray(found) && found.length ? "Carte(s) trouvée(s) : choisis celle qui correspond avant de l'ajouter." : "Texte lu, mais aucune carte sûre. La saisie manuelle a été préremplie ci-dessous.");
     } catch {
-      setScanStatus("La lecture a échoué. Essaie de nouveau ou utilise la saisie manuelle.");
+      setScanStatus("La lecture a échoué. Vérifie ta connexion lors du premier scan, puis réessaie.");
     }
   }
 
@@ -337,6 +362,7 @@ const progress = (cards.length / 12) * 100;
       />
       <div className="scanFrame" />
       <p>{scanStatus}</p>
+      {capturePreview && <img className="capturePreview" src={capturePreview} alt="Photo utilisée pour la lecture" />}
       {scanText.number || scanText.name ? <small>Lu : {scanText.number || "—"} {scanText.name ? `• ${scanText.name}` : ""}</small> : null}
       <div className="scannerActions">
         <button className="btn" onClick={captureAndScan} type="button">Prendre la photo</button>
@@ -527,6 +553,7 @@ const progress = (cards.length / 12) * 100;
 }
 
 .scanner video { width: 100%; border-radius: 12px; background: #000; max-height: 55vh; object-fit: cover; }
+.capturePreview { width: 72px; border-radius: 8px; border: 1px solid rgba(255,255,255,.45); }
 .scanFrame { border: 2px solid #e8c56f; border-radius: 12px; height: 0; margin: -45% 8% 45%; pointer-events: none; }
 .scanner p { margin: 0; font-size: 14px; }
 .scanner small { opacity: .8; overflow-wrap: anywhere; }
