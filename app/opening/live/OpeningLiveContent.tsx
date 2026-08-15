@@ -87,25 +87,40 @@ const progress = (cards.length / 12) * 100;
   }, []);
 
   async function openScanner() {
+    setScannerOpen(true);
     if (!navigator.mediaDevices?.getUserMedia) {
       setScanStatus("La caméra n'est pas disponible dans ce navigateur. Utilise la saisie manuelle.");
       return;
     }
+
+    if (!window.isSecureContext && window.location.hostname !== "localhost") {
+      setScanStatus("Sur iPhone, Safari autorise la caméra uniquement sur un site sécurisé HTTPS. Ouvre la version publiée du site, pas son adresse locale.");
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+      } catch {
+        // Safari peut refuser les contraintes avancées : on retente avec la caméra disponible.
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
       streamRef.current = stream;
-      setScannerOpen(true);
       setScanSuggestions([]);
       setScanText({ number: "", name: "" });
-      setScanStatus("Cadre la carte entière, puis prends la photo.");
-      requestAnimationFrame(() => {
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      });
-    } catch {
-      setScanStatus("Autorise l'accès à la caméra pour utiliser le scanner.");
+      const hasNativeOcr = Boolean((window as unknown as { TextDetector?: unknown }).TextDetector);
+      setScanStatus(hasNativeOcr
+        ? "Cadre la carte entière, puis prends la photo."
+        : "Caméra ouverte. Safari ne permet pas encore la lecture automatique ici : utilise la saisie manuelle après la photo.");
+    } catch (error) {
+      const message = error instanceof DOMException && error.name === "NotAllowedError"
+        ? "Autorise l'accès à l'appareil photo dans les réglages de Safari, puis réessaie."
+        : "Impossible d'ouvrir la caméra. Vérifie que Safari a accès à l'appareil photo.";
+      setScanStatus(message);
     }
   }
 
@@ -307,7 +322,19 @@ const progress = (cards.length / 12) * 100;
 
   {scannerOpen && (
     <div className="scanner" role="dialog" aria-modal="true" aria-label="Scanner une carte Lorcana">
-      <video ref={videoRef} autoPlay muted playsInline />
+      <video
+        ref={(element) => {
+          videoRef.current = element;
+          if (element && streamRef.current) {
+            element.srcObject = streamRef.current;
+            void element.play().catch(() => setScanStatus("Touchez l'aperçu pour démarrer la caméra."));
+          }
+        }}
+        autoPlay
+        muted
+        playsInline
+        onClick={() => void videoRef.current?.play()}
+      />
       <div className="scanFrame" />
       <p>{scanStatus}</p>
       {scanText.number || scanText.name ? <small>Lu : {scanText.number || "—"} {scanText.name ? `• ${scanText.name}` : ""}</small> : null}
@@ -663,6 +690,34 @@ const progress = (cards.length / 12) * 100;
   border-radius: 10px;
   cursor: pointer;
   text-align: center;
+}
+
+@media (max-width: 640px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 0 12px 20px;
+  }
+
+  .left { min-height: 0; }
+  .current img { max-width: 230px; }
+  .historyFull { grid-column: span 1; }
+  .boosterBox img { width: 58px; }
+  .searchBox .btn, .searchBox .undoBtn, .scanBtn { min-height: 44px; }
+
+  .scanner {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    border-radius: 0;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  .scanner video { max-height: 48vh; }
+  .scannerActions { position: sticky; bottom: 0; }
+  .scannerActions button, .rescanBtn { min-height: 46px; flex: 1; }
+  .scanResult { align-items: flex-start; }
 }
       `}</style>
     </main>
