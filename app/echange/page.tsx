@@ -129,6 +129,24 @@ export default function EchangePage() {
     }
   }
 
+  async function confirmSuggestedSwap() {
+    const match = suggestion?.matches?.[0];
+    if (!match || busy) return;
+    const fromUser = localStorage.getItem("activeUser") === "angele" ? "angele" : "adrien";
+    const toUser = fromUser === "adrien" ? "angele" : "adrien";
+    setBusy("suggested-swap");
+    try {
+      const response = await fetch("/api/trades/swap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ give: { fromUser, toUser, cardId: match.give.id }, receive: { fromUser: toUser, toUser: fromUser, cardId: match.receive.id } }) });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) { alert("❌ Échange impossible : " + (result?.error || "réessaie dans un instant.")); return; }
+      await load();
+      const refreshedUser = localStorage.getItem("activeUser") === "angele" ? "angele" : "adrien";
+      const refreshed = await fetch(`/api/echange/suggestions?userId=${refreshedUser}`, { cache: "no-store" }).then((res) => res.json());
+      setSuggestion(refreshed);
+      setToast("✨ Échange validé : les deux collections ont été mises à jour.");
+    } finally { setBusy(null); }
+  }
+
   const a2g = useMemo(() => data?.adrienToAngele ?? [], [data]);
   const g2a = useMemo(() => data?.angeleToAdrien ?? [], [data]);
 
@@ -238,7 +256,7 @@ export default function EchangePage() {
         </div>
       )}
 
-      {suggestion && suggestion.possible > 0 && <section className="swapSuggestion"><div><p>ÉCHANGE SUGGÉRÉ</p><h2>Un échange équilibré est possible avec {suggestion.other === "angele" ? "Angèle" : "Adrien"}</h2><span>{suggestion.matches?.[0] ? `Écart estimé : ${suggestion.matches[0].difference.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}.` : "Tu donnes un doublon contre une carte qui te manque."}</span></div><div className="swapCards">{suggestion.matches?.[0] ? <><div><img src={suggestion.matches[0].give.imageUrl || ""} alt={suggestion.matches[0].give.name}/><small>Tu donnes · {suggestion.matches[0].giveValue.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}</small></div><b>⇄</b><div><img src={suggestion.matches[0].receive.imageUrl || ""} alt={suggestion.matches[0].receive.name}/><small>Tu reçois · {suggestion.matches[0].receiveValue.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}</small></div></> : <><div>{suggestion.gives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div><b>⇄</b><div>{suggestion.receives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div></>}</div></section>}
+      {suggestion && suggestion.possible > 0 && <section className="swapSuggestion"><div><p>ÉCHANGE SUGGÉRÉ</p><h2>Un échange équilibré est possible avec {suggestion.other === "angele" ? "Angèle" : "Adrien"}</h2><span>{suggestion.matches?.[0] ? `Écart estimé : ${suggestion.matches[0].difference.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}.` : "Tu donnes un doublon contre une carte qui te manque."}</span></div><div className="swapCards">{suggestion.matches?.[0] ? <><div><img src={suggestion.matches[0].give.imageUrl || ""} alt={suggestion.matches[0].give.name}/><small>Tu donnes · {suggestion.matches[0].giveValue.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}</small></div><b>⇄</b><div><img src={suggestion.matches[0].receive.imageUrl || ""} alt={suggestion.matches[0].receive.name}/><small>Tu reçois · {suggestion.matches[0].receiveValue.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}</small></div></> : <><div>{suggestion.gives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div><b>⇄</b><div>{suggestion.receives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div></>}</div>{suggestion.matches?.[0] && <button className="confirmSwap" disabled={busy === "suggested-swap"} onClick={confirmSuggestedSwap}>{busy === "suggested-swap" ? "Validation…" : "✓ Valider cet échange"}</button>}</section>}
 
       {/* Adrien -> Angèle */}
       <section
@@ -341,7 +359,7 @@ export default function EchangePage() {
         )}
       </section>
 
-      <style jsx>{`.swapSuggestion{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:16px;padding:18px 20px;border:1px solid #e6d6ac;border-radius:18px;background:linear-gradient(120deg,#fff8e8,#f2edff);box-shadow:0 8px 20px rgba(55,38,88,.06)}.swapSuggestion p{margin:0;color:#98711e;font-size:10px;font-weight:900;letter-spacing:.12em}.swapSuggestion h2{margin:5px 0;font-size:19px}.swapSuggestion span{font-size:11px;color:#766b7b}.swapCards{display:flex;align-items:center;gap:9px}.swapCards>div{display:flex}.swapCards img{width:37px;height:53px;object-fit:cover;border-radius:6px;border:2px solid white;margin-left:-9px;box-shadow:0 4px 9px rgba(0,0,0,.12)}.swapCards b{color:#70558f;font-size:22px}@media(max-width:600px){.swapSuggestion{align-items:flex-start;flex-direction:column}.swapCards{align-self:center}}`}</style>
+      <style jsx>{`.swapSuggestion{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:16px;padding:18px 20px;border:1px solid #e6d6ac;border-radius:18px;background:linear-gradient(120deg,#fff8e8,#f2edff);box-shadow:0 8px 20px rgba(55,38,88,.06)}.swapSuggestion p{margin:0;color:#98711e;font-size:10px;font-weight:900;letter-spacing:.12em}.swapSuggestion h2{margin:5px 0;font-size:19px}.swapSuggestion span{font-size:11px;color:#766b7b}.swapCards{display:flex;align-items:center;gap:9px}.swapCards>div{display:flex;flex-direction:column;gap:4px}.swapCards small{font-size:9px;color:#796d83;white-space:nowrap}.swapCards img{width:37px;height:53px;object-fit:cover;border-radius:6px;border:2px solid white;margin-left:-9px;box-shadow:0 4px 9px rgba(0,0,0,.12)}.swapCards b{color:#70558f;font-size:22px}.confirmSwap{border:0;border-radius:11px;padding:11px 13px;background:#4f377c;color:#fff;font-size:11px;font-weight:900;cursor:pointer;box-shadow:0 7px 14px rgba(64,41,105,.22)}.confirmSwap:disabled{opacity:.6;cursor:wait}@media(max-width:600px){.swapSuggestion{align-items:flex-start;flex-direction:column}.swapCards{align-self:center}.confirmSwap{width:100%}}`}</style>
 
       {/* Angèle -> Adrien */}
       <section
