@@ -103,6 +103,14 @@ export default function AppHeader() {
         </div>
       </header>
 
+      <nav className="appMobileDock" aria-label="Raccourcis mobiles">
+        <Link href="/" className={pathname === "/" ? "active" : ""}><span>✦</span>Accueil</Link>
+        <Link href="/chapitres" className={pathname.startsWith("/chapitres") ? "active" : ""}><span>📚</span>Album</Link>
+        <Link href="/opening" className="scan"><span>⌁</span>Scanner</Link>
+        <Link href="/stats" className={pathname.startsWith("/stats") ? "active" : ""}><span>📊</span>Stats</Link>
+        <button onClick={() => setMenuOpen(true)}><span>☰</span>Plus</button>
+      </nav>
+
       {/* MOBILE */}
       {menuOpen && (
         <div className="appNavOverlay" onClick={() => setMenuOpen(false)}>
@@ -134,6 +142,8 @@ export default function AppHeader() {
         .quickOverlay{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:18px;background:rgba(18,10,32,.62);backdrop-filter:blur(6px)}.quickCard{position:relative;display:grid;grid-template-columns:160px minmax(0,1fr);gap:19px;width:min(510px,100%);padding:18px;border:1px solid rgba(255,255,255,.7);border-radius:22px;background:linear-gradient(145deg,#fffdf9,#f1ebf8);box-shadow:0 25px 60px rgba(12,8,21,.35)}.quickCard>img{width:160px;border-radius:11px;box-shadow:0 12px 23px rgba(43,30,70,.23)}.quickCard p{font-size:9px;font-weight:900;letter-spacing:.1em;color:#8c809a;margin:8px 0}.quickCard h2{margin:0;font-size:25px;letter-spacing:-.05em}.quickCard span,.quickCard strong,.quickCard a{display:block;margin-top:9px;font-size:11px}.quickCard span{color:#857c90}.quickCard strong{color:#4c8762}.quickCard a{color:#694a9b;font-weight:900;text-decoration:none}.closeQuick{position:absolute;right:10px;top:8px;border:0;background:#eee8f4;border-radius:50%;width:27px;height:27px;font-size:20px;cursor:pointer;color:#4c4160}
         @media(max-width:1120px){.appNav{grid-template-columns:auto 1fr auto}.appNavLinks{display:none}.appNavBurger{display:grid;place-items:center}.globalSearch{justify-self:end;width:min(250px,40vw)}}
         @media(max-width:640px){.appNav{top:7px;width:calc(100% - 14px);min-height:58px;margin-top:7px;padding:7px 8px}.appNavLogo{width:35px;height:35px;border-radius:11px;font-size:18px}.appNavTitle{font-size:17px}.appNavSubtitle{display:none}.globalSearch{width:min(180px,40vw);border-radius:11px}.appNavActions select{display:none}.appNavBurger{width:35px;height:35px}.searchResults{position:fixed;top:72px;left:7px;right:7px;width:auto}.quickCard{grid-template-columns:112px minmax(0,1fr);gap:13px;padding:14px}.quickCard>img{width:112px}.quickCard h2{font-size:20px}}
+        .appMobileDock{display:none}
+        @media(max-width:640px){.appMobileDock{position:fixed;z-index:950;bottom:9px;left:9px;right:9px;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;padding:5px;border:1px solid rgba(255,255,255,.18);border-radius:20px;background:rgba(28,19,50,.88);box-shadow:0 14px 34px rgba(25,15,43,.28);backdrop-filter:blur(16px)}.appMobileDock a,.appMobileDock button{min-width:0;display:grid;justify-items:center;gap:2px;padding:6px 2px;border:0;border-radius:14px;background:transparent;color:#d8d1e6;text-decoration:none;font-size:8px;font-weight:800;line-height:1.1}.appMobileDock span{font-size:16px}.appMobileDock .active{color:#fff;background:rgba(255,255,255,.12)}.appMobileDock .scan{margin-top:-22px;padding:9px 2px;border:3px solid #f1eafb;border-radius:17px;background:linear-gradient(135deg,#ffdc79,#d79d37);color:#372044;box-shadow:0 9px 17px rgba(0,0,0,.22)}.appMobileDock .scan span{font-size:22px;line-height:.7}.appMobileDock button{cursor:pointer}body{padding-bottom:70px}}
       `}</style>
     </>
   );
