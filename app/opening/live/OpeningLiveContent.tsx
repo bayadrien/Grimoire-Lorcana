@@ -24,6 +24,11 @@ type OcrWorker = {
   terminate: () => Promise<void>;
 };
 
+type CameraCapabilities = {
+  focusMode?: string[];
+  zoom?: { min: number; max: number };
+};
+
 export default function OpeningLiveContent() {
   const params = useSearchParams();
 
@@ -38,6 +43,7 @@ export default function OpeningLiveContent() {
   const [scanStatus, setScanStatus] = useState("");
   const [scanText, setScanText] = useState({ number: "", name: "" });
   const [numberReadings, setNumberReadings] = useState<string[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
   const [scanSuggestions, setScanSuggestions] = useState<Card[]>([]);
   const [capturePreview, setCapturePreview] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -110,7 +116,12 @@ const progress = (cards.length / 12) * 100;
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: {
+            facingMode: { ideal: "environment" },
+            aspectRatio: { ideal: 3 / 4 },
+            width: { ideal: 1080 },
+            height: { ideal: 1440 },
+          },
           audio: false,
         });
       } catch {
@@ -118,11 +129,27 @@ const progress = (cards.length / 12) * 100;
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       }
       streamRef.current = stream;
+      const track = stream.getVideoTracks()[0] as MediaStreamTrack & {
+        getCapabilities?: () => CameraCapabilities;
+      };
+      const capabilities = track?.getCapabilities?.() as unknown as CameraCapabilities | undefined;
+      const advanced: Record<string, string | number>[] = [];
+      if (capabilities?.focusMode?.includes("continuous")) advanced.push({ focusMode: "continuous" });
+      if (capabilities?.zoom && capabilities.zoom.max > capabilities.zoom.min) {
+        advanced.push({ zoom: Math.min(capabilities.zoom.max, capabilities.zoom.min + (capabilities.zoom.max - capabilities.zoom.min) * 0.25) });
+      }
+      if (advanced.length) {
+        try {
+          await track.applyConstraints({ advanced } as unknown as MediaTrackConstraints);
+        } catch {
+          // Chaque téléphone expose des réglages différents : la caméra reste utilisable sans ces optimisations.
+        }
+      }
       setScanSuggestions([]);
       setScanText({ number: "", name: "" });
       setNumberReadings([]);
       setCapturePreview("");
-      setScanStatus("Caméra prête. Cadre la carte entière, puis prends la photo.");
+      setScanStatus("Caméra prête. Centre le numéro dans le cadre doré et attends que l'image soit nette.");
     } catch (error) {
       const message = error instanceof DOMException && error.name === "NotAllowedError"
         ? "Autorise l'accès à l'appareil photo dans les réglages de Safari, puis réessaie."
@@ -178,14 +205,17 @@ const progress = (cards.length / 12) * 100;
   }
 
   async function captureAndScan() {
+    if (isScanning) return;
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
       setScanStatus("La caméra n'est pas encore prête. Attends une seconde, puis réessaie.");
       return;
     }
+    setIsScanning(true);
     setScanSuggestions([]);
-    setScanStatus("Carte stable… je prends trois lectures du numéro.");
+    setScanStatus("Mise au point en cours… garde le téléphone immobile.");
     try {
+      await new Promise((resolve) => window.setTimeout(resolve, 900));
       const preview = document.createElement("canvas");
       preview.width = video.videoWidth;
       preview.height = video.videoHeight;
@@ -223,6 +253,8 @@ const progress = (cards.length / 12) * 100;
       console.error("CARD OCR ERROR:", error);
       const detail = error instanceof Error ? error.message : "erreur inconnue";
       setScanStatus(`La lecture a échoué : ${detail}`);
+    } finally {
+      setIsScanning(false);
     }
   }
 
@@ -402,7 +434,9 @@ const progress = (cards.length / 12) * 100;
       {scanText.number || scanText.name ? <small>Lu : {scanText.number || "—"} {scanText.name ? `• ${scanText.name}` : ""}</small> : null}
       {numberReadings.length > 0 && <small>Lectures : {numberReadings.join(" · ")}</small>}
       <div className="scannerActions">
-        <button className="btn" onClick={captureAndScan} type="button">Lire le numéro</button>
+        <button className="btn" onClick={captureAndScan} type="button" disabled={isScanning}>
+          {isScanning ? "Mise au point / lecture…" : "Lire le numéro"}
+        </button>
         <button className="undoBtn" onClick={closeScanner} type="button">Fermer</button>
       </div>
       {scanSuggestions.map((card) => (
@@ -589,8 +623,8 @@ const progress = (cards.length / 12) * 100;
   gap: 10px;
 }
 
-.cameraViewport { position: relative; }
-.scanner video { width: 100%; border-radius: 12px; background: #000; max-height: 55vh; object-fit: cover; }
+.cameraViewport { position: relative; width: min(100%, 430px); margin: 0 auto; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 12px; background: #000; }
+.scanner video { width: 100%; height: 100%; border-radius: 12px; object-fit: cover; }
 .capturePreview { width: 72px; border-radius: 8px; border: 1px solid rgba(255,255,255,.45); }
 .scanFrame {
   position: absolute;
@@ -792,7 +826,7 @@ const progress = (cards.length / 12) * 100;
     overflow-y: auto;
   }
 
-  .scanner video { max-height: 48vh; }
+  .cameraViewport { width: 100%; max-height: 56vh; }
   .scannerActions { position: sticky; bottom: 0; }
   .scannerActions button, .rescanBtn { min-height: 46px; flex: 1; }
   .scanResult { align-items: flex-start; }
