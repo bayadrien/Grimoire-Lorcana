@@ -1390,8 +1390,8 @@ input.pill{
 
 /* ===== IDENTITÉ GLOBALE — GRIMOIRE ===== */
 :root{
-  --bg:#f7f1e5;
-  --bg2:#eee5d3;
+  --bg:#f2f0fb;
+  --bg2:#e5e0f5;
   --ink:#2b2140;
   --muted:#776b83;
   --gold:#d19a36;
@@ -1403,15 +1403,15 @@ input.pill{
   --radius:22px;
 }
 
-html{background:#f7f1e5;}
+html{background:#f2f0fb;}
 body{
   min-width:320px;
   color:var(--ink);
   background:
-    radial-gradient(900px 560px at -10% 0%, rgba(255,216,126,.48), transparent 68%),
-    radial-gradient(830px 620px at 105% 17%, rgba(184,153,225,.22), transparent 65%),
-    radial-gradient(760px 500px at 50% 100%, rgba(245,204,121,.18), transparent 72%),
-    linear-gradient(145deg,#fbf7ef 0%,#f4eddf 50%,#f7f4ee 100%);
+    radial-gradient(900px 560px at -10% 0%, rgba(125,99,194,.20), transparent 68%),
+    radial-gradient(830px 620px at 105% 17%, rgba(113,168,223,.22), transparent 65%),
+    radial-gradient(760px 500px at 50% 100%, rgba(226,188,119,.15), transparent 72%),
+    linear-gradient(145deg,#f8f7ff 0%,#eeebf8 50%,#e6e1f2 100%);
   background-attachment:fixed;
 }
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.34;background-image:radial-gradient(rgba(92,61,128,.12) .55px,transparent .6px);background-size:9px 9px;mask-image:linear-gradient(180deg,black,transparent 72%)}
