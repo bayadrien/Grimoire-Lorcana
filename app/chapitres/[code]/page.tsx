@@ -221,6 +221,27 @@ console.log("CARD SAMPLE =", cards[0]);
     });
   }, [cards, chapterCode, q, query, onlyMissing, collection]);
 
+  const chapterProgress = useMemo(() => {
+    const allCards = cards.filter((card) => Number(card.setCode) === chapterCode);
+    const owned = allCards.filter((card) => {
+      const qty = collection[card.id];
+      return (qty?.normal ?? 0) + (qty?.foil ?? 0) > 0;
+    }).length;
+    const doubles = allCards.filter((card) => {
+      const qty = collection[card.id];
+      return (qty?.normal ?? 0) + (qty?.foil ?? 0) > 1;
+    }).length;
+    const total = allCards.length;
+
+    return {
+      total,
+      owned,
+      missing: total - owned,
+      doubles,
+      percent: total ? Math.round((owned / total) * 100) : 0,
+    };
+  }, [cards, chapterCode, collection]);
+
 
 
 
@@ -229,13 +250,13 @@ console.log("CARD SAMPLE =", cards[0]);
 
   return (
     <main className="shell">
-      <header className="topbar">
+      <header className="chapterHero">
         <div className="brand">
           <div className="sigil">📘</div>
           <div>
             <h1>Chapitre {chapterCode}</h1>
             <p>
-              {chapterName} • {chapterCards.length} cartes
+              {chapterName}
             </p>
           </div>
         </div>
@@ -246,7 +267,25 @@ console.log("CARD SAMPLE =", cards[0]);
         </div>
       </header>
 
-      <div className="topbar" style={{ marginTop: 12 }}>
+      <section className="chapterProgressPanel">
+        <div className="chapterProgressHeadline">
+          <div>
+            <span>Progression de ta collection</span>
+            <strong>{chapterProgress.owned} <small>/ {chapterProgress.total}</small></strong>
+          </div>
+          <b>{chapterProgress.percent}%</b>
+        </div>
+        <div className="chapterProgressTrack">
+          <div style={{ width: `${chapterProgress.percent}%` }} />
+        </div>
+        <div className="chapterQuickStats">
+          <span>✅ {chapterProgress.owned} possédées</span>
+          <button onClick={() => setOnlyMissing(true)}>⬜ {chapterProgress.missing} manquantes</button>
+          <span>🎁 {chapterProgress.doubles} doublons</span>
+        </div>
+      </section>
+
+      <div className="chapterFilters">
         <input
           className="pill"
           value={q}
@@ -271,7 +310,7 @@ console.log("CARD SAMPLE =", cards[0]);
         </div>
       )}
 
-      <section className="grid" style={{ marginTop: 12 }}>
+      <section className="chapterGrid">
         {chapterCards.map((c, index) => {
           console.log("CARD ID =", c.id, c.name);
           const qtys = collection[c.id] ?? { normal: 0, foil: 0 };
@@ -422,6 +461,77 @@ console.log("CARD SAMPLE =", cards[0]);
           );
         })}
       </section>
+
+      <style jsx>{`
+        .chapterHero {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          padding: 18px;
+          border-radius: 22px;
+          background: rgba(255,250,240,.82);
+          border: 1px solid rgba(43,36,28,.12);
+          box-shadow: 0 10px 30px rgba(43,36,28,.10);
+        }
+
+        .chapterProgressPanel {
+          margin-top: 14px;
+          padding: 16px 18px;
+          border-radius: 20px;
+          background: linear-gradient(135deg, #243b64, #3d5f94);
+          color: white;
+          box-shadow: 0 14px 30px rgba(36,59,100,.22);
+        }
+
+        .chapterProgressHeadline { display: flex; align-items: end; justify-content: space-between; }
+        .chapterProgressHeadline span { display: block; font-size: 12px; opacity: .78; }
+        .chapterProgressHeadline strong { display: block; margin-top: 3px; font-size: 28px; line-height: 1; }
+        .chapterProgressHeadline small { font-size: 15px; opacity: .72; }
+        .chapterProgressHeadline b { font-size: 24px; }
+        .chapterProgressTrack { height: 8px; margin-top: 15px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.22); }
+        .chapterProgressTrack div { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd166, #ffb703); transition: width .35s ease; }
+        .chapterQuickStats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 13px; font-size: 12px; }
+        .chapterQuickStats span, .chapterQuickStats button { padding: 6px 9px; border-radius: 999px; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); color: white; }
+        .chapterQuickStats button { cursor: pointer; }
+
+        .chapterFilters {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 14px;
+          padding: 10px;
+          border-radius: 18px;
+          background: rgba(255,255,255,.58);
+          border: 1px solid rgba(43,36,28,.10);
+        }
+
+        .chapterGrid {
+          display: grid;
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+          gap: 14px;
+          margin-top: 16px;
+        }
+
+        .chapterGrid :global(.card) { border-radius: 16px; }
+        .chapterGrid :global(.cardMedia) { aspect-ratio: 2 / 3; }
+        .chapterGrid :global(.qtyPill.unified) { top: 8px; left: 8px; transform: scale(.88); transform-origin: top left; }
+        .chapterGrid :global(.corner) { transform: scale(.88); transform-origin: top right; }
+        .chapterGrid :global(.otherBadge) { transform: scale(.85); transform-origin: bottom right; }
+
+        @media (max-width: 1050px) { .chapterGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        @media (max-width: 780px) {
+          .chapterHero { align-items: flex-start; flex-direction: column; }
+          .controls { width: 100%; justify-content: flex-start; }
+          .chapterGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+        }
+        @media (max-width: 520px) {
+          .chapterProgressPanel { padding: 14px; }
+          .chapterGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+          .chapterFilters :global(input.pill) { min-width: 0; width: 100%; }
+        }
+      `}</style>
     </main>
   );
 }
