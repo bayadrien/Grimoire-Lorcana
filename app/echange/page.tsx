@@ -47,6 +47,7 @@ export default function EchangePage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<{ other:string; gives:Card[]; receives:Card[]; possible:number } | null>(null);
 
   // ✅ 2A: Toggle Grille/Liste + mémorisation
   const [view, setView] = useState<"grid" | "list">("grid");
@@ -83,6 +84,11 @@ export default function EchangePage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const userId = localStorage.getItem("activeUser") === "angele" ? "angele" : "adrien";
+    fetch(`/api/echange/suggestions?userId=${userId}`, { cache: "no-store" }).then((response) => response.json()).then(setSuggestion).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -236,6 +242,8 @@ export default function EchangePage() {
         </div>
       )}
 
+      {suggestion && suggestion.possible > 0 && <section className="swapSuggestion"><div><p>ÉCHANGE SUGGÉRÉ</p><h2>Un échange équilibré est possible avec {suggestion.other === "angele" ? "Angèle" : "Adrien"}</h2><span>Tu donnes un doublon contre une carte qui te manque.</span></div><div className="swapCards"><div>{suggestion.gives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div><b>⇄</b><div>{suggestion.receives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div></div></section>}
+
       {/* Adrien -> Angèle */}
       <section
         style={{
@@ -336,6 +344,8 @@ export default function EchangePage() {
           </div>
         )}
       </section>
+
+      <style jsx>{`.swapSuggestion{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:16px;padding:18px 20px;border:1px solid #e6d6ac;border-radius:18px;background:linear-gradient(120deg,#fff8e8,#f2edff);box-shadow:0 8px 20px rgba(55,38,88,.06)}.swapSuggestion p{margin:0;color:#98711e;font-size:10px;font-weight:900;letter-spacing:.12em}.swapSuggestion h2{margin:5px 0;font-size:19px}.swapSuggestion span{font-size:11px;color:#766b7b}.swapCards{display:flex;align-items:center;gap:9px}.swapCards>div{display:flex}.swapCards img{width:37px;height:53px;object-fit:cover;border-radius:6px;border:2px solid white;margin-left:-9px;box-shadow:0 4px 9px rgba(0,0,0,.12)}.swapCards b{color:#70558f;font-size:22px}@media(max-width:600px){.swapSuggestion{align-items:flex-start;flex-direction:column}.swapCards{align-self:center}}`}</style>
 
       {/* Angèle -> Adrien */}
       <section

@@ -35,7 +35,20 @@ model Card {
   trades            Trade[]
   boosterCards      BoosterCard[]
   deckCards         DeckCard[]
+  priceHistory      PriceHistory[]
   @@map("Card_new")
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  cardId     String
+  normalEur  Float
+  foilEur    Float
+  recordedAt DateTime @default(now())
+  card       Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, recordedAt])
+  @@index([cardId, recordedAt])
 }
 
 model Collection {
