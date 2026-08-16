@@ -15,22 +15,45 @@ function normalise(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function numberPart(value: string) {
-  const match = value.match(/\d{1,3}(?:\s*\/\s*\d{1,3})?/);
-  return match?.[0].replace(/\s/g, "") ?? "";
+function scannedNumberParts(value: string) {
+  const fractions = value.match(/\d{1,3}\s*\/\s*\d{1,3}/g) ?? [];
+  const plainNumbers = value.match(/\d{1,3}/g) ?? [];
+  return Array.from(new Set([
+    ...fractions.map((part) => part.replace(/\s/g, "")),
+    ...plainNumbers.map((part) => String(Number(part))),
+  ]));
+}
+
+function cardNumberParts(value: string) {
+  const fractions = value.match(/\d{1,3}\s*\/\s*\d{1,3}/g) ?? [];
+  if (fractions.length) {
+    return Array.from(new Set(fractions.flatMap((part) => {
+      const clean = part.replace(/\s/g, "");
+      return [clean, String(Number(clean.split("/")[0]))];
+    })));
+  }
+  return Array.from(new Set((value.match(/\d{1,3}/g) ?? []).map((part) => String(Number(part)))));
 }
 
 function scoreCard(card: ScanCard, number: string, name: string) {
-  const scannedNumber = numberPart(number);
-  const cardNumber = numberPart(card.collection_number ?? "");
+  const scannedNumbers = scannedNumberParts(number);
+  // Le dénominateur « /204 » décrit le set, pas la carte : il ne doit jamais suffire à proposer un résultat.
+  const cardNumbers = cardNumberParts(card.collection_number ?? "");
   const scannedName = normalise(name);
   const names = [card.name, card.name_fr].filter(Boolean).map((value) => normalise(value as string));
   let score = 0;
 
-  if (scannedNumber && cardNumber) {
-    if (scannedNumber === cardNumber) score += 85;
-    else if (scannedNumber.split("/")[0] === cardNumber.split("/")[0]) score += 65;
-    else if (cardNumber.includes(scannedNumber) || scannedNumber.includes(cardNumber)) score += 42;
+  for (const scannedNumber of scannedNumbers) {
+    for (const cardNumber of cardNumbers) {
+      if (scannedNumber === cardNumber) {
+        // Une correspondance complète « 123/204 » est le meilleur indice.
+        score = Math.max(score, scannedNumber.includes("/") ? 94 : 70);
+      } else if (scannedNumber.includes("/") && cardNumber.includes("/") && scannedNumber.split("/")[0] === cardNumber.split("/")[0]) {
+        score = Math.max(score, 74);
+      } else if (!scannedNumber.includes("/") && !cardNumber.includes("/") && scannedNumber === cardNumber) {
+        score = Math.max(score, 70);
+      }
+    }
   }
 
   if (scannedName) {

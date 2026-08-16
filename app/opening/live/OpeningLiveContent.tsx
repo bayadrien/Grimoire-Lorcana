@@ -37,6 +37,7 @@ export default function OpeningLiveContent() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scanStatus, setScanStatus] = useState("");
   const [scanText, setScanText] = useState({ number: "", name: "" });
+  const [numberReadings, setNumberReadings] = useState<string[]>([]);
   const [scanSuggestions, setScanSuggestions] = useState<Card[]>([]);
   const [capturePreview, setCapturePreview] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -119,6 +120,7 @@ const progress = (cards.length / 12) * 100;
       streamRef.current = stream;
       setScanSuggestions([]);
       setScanText({ number: "", name: "" });
+      setNumberReadings([]);
       setCapturePreview("");
       setScanStatus("Caméra prête. Cadre la carte entière, puis prends la photo.");
     } catch (error) {
@@ -144,16 +146,35 @@ const progress = (cards.length / 12) * 100;
     return ocrWorkerRef.current;
   }
 
-  async function readCrop(worker: OcrWorker, canvas: HTMLCanvasElement, source: HTMLVideoElement, top: number, height: number) {
+  function captureNumberCrop(source: HTMLVideoElement) {
+    const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
-    if (!context) return "";
-    canvas.width = source.videoWidth;
-    canvas.height = Math.max(1, Math.round(source.videoHeight * height));
+    if (!context) return canvas;
+    const cropTop = source.videoHeight * 0.76;
+    const cropHeight = source.videoHeight * 0.22;
+    canvas.width = Math.min(1400, source.videoWidth);
+    canvas.height = Math.max(1, Math.round(canvas.width * (cropHeight / source.videoWidth)));
     context.filter = "grayscale(1) contrast(2)";
-    context.drawImage(source, 0, source.videoHeight * top, source.videoWidth, source.videoHeight * height, 0, 0, canvas.width, canvas.height);
+    context.drawImage(source, 0, cropTop, source.videoWidth, cropHeight, 0, 0, canvas.width, canvas.height);
     context.filter = "none";
-    const { data } = await worker.recognize(canvas);
-    return data.text.replace(/\s+/g, " ").trim();
+    return canvas;
+  }
+
+  function numberFromOcr(value: string) {
+    const corrected = value
+      .toUpperCase()
+      .replace(/[OQD]/g, "0")
+      .replace(/[IL|]/g, "1")
+      .replace(/S/g, "5")
+      .replace(/\s+/g, " ");
+    const fractions = corrected.match(/\d{1,3}\s*\/\s*\d{2,3}/g) ?? [];
+    return fractions.map((part) => part.replace(/\s/g, ""));
+  }
+
+  function mostFrequent(readings: string[]) {
+    const counts = new Map<string, number>();
+    readings.forEach((reading) => counts.set(reading, (counts.get(reading) ?? 0) + 1));
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
   }
 
   async function captureAndScan() {
@@ -163,7 +184,7 @@ const progress = (cards.length / 12) * 100;
       return;
     }
     setScanSuggestions([]);
-    setScanStatus("Photo prise. Lecture de la carte en cours…");
+    setScanStatus("Carte stable… je prends trois lectures du numéro.");
     try {
       const preview = document.createElement("canvas");
       preview.width = video.videoWidth;
@@ -171,24 +192,37 @@ const progress = (cards.length / 12) * 100;
       preview.getContext("2d")?.drawImage(video, 0, 0);
       setCapturePreview(preview.toDataURL("image/jpeg", 0.82));
 
+      const captures = [captureNumberCrop(video)];
+      await new Promise((resolve) => window.setTimeout(resolve, 220));
+      captures.push(captureNumberCrop(video));
+      await new Promise((resolve) => window.setTimeout(resolve, 220));
+      captures.push(captureNumberCrop(video));
+
       const worker = await getOcrWorker();
-      setScanStatus("Photo prise. Lecture du numéro de collection…");
-      const number = await readCrop(worker, document.createElement("canvas"), video, 0.68, 0.32);
-      setScanStatus("Photo prise. Lecture du nom de la carte…");
-      const name = await readCrop(worker, document.createElement("canvas"), video, 0, 0.34);
-      if (!number && !name) {
-        setScanStatus("La photo a été prise, mais aucun texte n'a été lu. Essaie avec plus de lumière et cadre mieux le haut et le bas de la carte.");
+      const readings: string[] = [];
+      for (let index = 0; index < captures.length; index += 1) {
+        setScanStatus(`Lecture du numéro ${index + 1} / ${captures.length}…`);
+        const { data } = await worker.recognize(captures[index]);
+        readings.push(...numberFromOcr(data.text));
+      }
+
+      const number = mostFrequent(readings);
+      setNumberReadings(readings);
+      if (!number) {
+        setScanStatus("La photo a été prise, mais le numéro n'a pas été lu. Place uniquement le bas de la carte dans le cadre doré, sans reflet.");
         return;
       }
-      setScanText({ number, name });
-      setInput(number || name);
+      setScanText({ number, name: "" });
+      setInput(number);
       setScanStatus("Recherche parmi les cartes du chapitre…");
-      const response = await fetch(`/api/cards/scan?chapter=${encodeURIComponent(chapter)}&number=${encodeURIComponent(number)}&name=${encodeURIComponent(name)}`);
+      const response = await fetch(`/api/cards/scan?chapter=${encodeURIComponent(chapter)}&number=${encodeURIComponent(readings.join(" "))}`);
       const found = await response.json();
       setScanSuggestions(Array.isArray(found) ? found : []);
       setScanStatus(Array.isArray(found) && found.length ? "Carte(s) trouvée(s) : choisis celle qui correspond avant de l'ajouter." : "Texte lu, mais aucune carte sûre. La saisie manuelle a été préremplie ci-dessous.");
-    } catch {
-      setScanStatus("La lecture a échoué. Vérifie ta connexion lors du premier scan, puis réessaie.");
+    } catch (error) {
+      console.error("CARD OCR ERROR:", error);
+      const detail = error instanceof Error ? error.message : "erreur inconnue";
+      setScanStatus(`La lecture a échoué : ${detail}`);
     }
   }
 
@@ -347,25 +381,28 @@ const progress = (cards.length / 12) * 100;
 
   {scannerOpen && (
     <div className="scanner" role="dialog" aria-modal="true" aria-label="Scanner une carte Lorcana">
-      <video
-        ref={(element) => {
-          videoRef.current = element;
-          if (element && streamRef.current) {
-            element.srcObject = streamRef.current;
-            void element.play().catch(() => setScanStatus("Touchez l'aperçu pour démarrer la caméra."));
-          }
-        }}
-        autoPlay
-        muted
-        playsInline
-        onClick={() => void videoRef.current?.play()}
-      />
-      <div className="scanFrame" />
+      <div className="cameraViewport">
+        <video
+          ref={(element) => {
+            videoRef.current = element;
+            if (element && streamRef.current) {
+              element.srcObject = streamRef.current;
+              void element.play().catch(() => setScanStatus("Touchez l'aperçu pour démarrer la caméra."));
+            }
+          }}
+          autoPlay
+          muted
+          playsInline
+          onClick={() => void videoRef.current?.play()}
+        />
+        <div className="scanFrame"><span>NUMÉRO DE LA CARTE</span></div>
+      </div>
       <p>{scanStatus}</p>
       {capturePreview && <img className="capturePreview" src={capturePreview} alt="Photo utilisée pour la lecture" />}
       {scanText.number || scanText.name ? <small>Lu : {scanText.number || "—"} {scanText.name ? `• ${scanText.name}` : ""}</small> : null}
+      {numberReadings.length > 0 && <small>Lectures : {numberReadings.join(" · ")}</small>}
       <div className="scannerActions">
-        <button className="btn" onClick={captureAndScan} type="button">Prendre la photo</button>
+        <button className="btn" onClick={captureAndScan} type="button">Lire le numéro</button>
         <button className="undoBtn" onClick={closeScanner} type="button">Fermer</button>
       </div>
       {scanSuggestions.map((card) => (
@@ -552,9 +589,23 @@ const progress = (cards.length / 12) * 100;
   gap: 10px;
 }
 
+.cameraViewport { position: relative; }
 .scanner video { width: 100%; border-radius: 12px; background: #000; max-height: 55vh; object-fit: cover; }
 .capturePreview { width: 72px; border-radius: 8px; border: 1px solid rgba(255,255,255,.45); }
-.scanFrame { border: 2px solid #e8c56f; border-radius: 12px; height: 0; margin: -45% 8% 45%; pointer-events: none; }
+.scanFrame {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 6%;
+  height: 19%;
+  border: 3px solid #e8c56f;
+  border-radius: 10px;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.scanFrame span { transform: translateY(-120%); font-size: 11px; font-weight: 800; color: #e8c56f; text-shadow: 0 1px 2px #000; }
 .scanner p { margin: 0; font-size: 14px; }
 .scanner small { opacity: .8; overflow-wrap: anywhere; }
 .scannerActions { display: flex; gap: 8px; }
