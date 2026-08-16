@@ -14,6 +14,19 @@ export async function GET(req: Request) {
     orderBy: {
       createdAt: "desc",
     },
+    include: {
+      cards: {
+        include: {
+          card: {
+            include: {
+              collections: {
+                where: { userId },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
   return NextResponse.json(decks);
