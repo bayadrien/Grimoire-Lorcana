@@ -108,19 +108,24 @@ export async function POST(req: Request) {
     });
     if (!matched.length) return NextResponse.json({ error: "Aucune carte de ce deck n’a pu être reconnue dans le Grimoire.", unmatched }, { status: 422 });
 
+    const mergedCards = [...matched.reduce((cards, card) => {
+      const existing = cards.get(card.cardId);
+      cards.set(card.cardId, existing ? { ...existing, quantity: existing.quantity + card.quantity } : card);
+      return cards;
+    }, new Map<string, (typeof matched)[number]>()).values()];
     const title = html.match(/<title>([^<|]+?)(?:\s*\||<\/title>)/i)?.[1]?.trim() || "Deck Dreamborn";
-    const inks = [...new Set(matched.map((card) => card.ink).filter((ink): ink is string => Boolean(ink)))].slice(0, 2);
+    const inks = [...new Set(mergedCards.map((card) => card.ink).filter((ink): ink is string => Boolean(ink)))].slice(0, 2);
     const deck = await prisma.deck.create({
       data: {
         name: title,
         description: "Importé depuis Dreamborn.ink",
         inks,
         userId,
-        cards: { create: matched.map((card) => ({ cardId: card.cardId, quantity: card.quantity })) },
+        cards: { create: mergedCards.map((card) => ({ cardId: card.cardId, quantity: card.quantity })) },
       },
       select: { id: true, name: true, inks: true },
     });
-    return NextResponse.json({ deck, imported: matched.length, totalCards: matched.reduce((sum, card) => sum + card.quantity, 0), unmatched });
+    return NextResponse.json({ deck, imported: mergedCards.length, totalCards: mergedCards.reduce((sum, card) => sum + card.quantity, 0), unmatched });
   } catch (error) {
     console.error("DREAMBORN IMPORT ERROR:", error);
     return NextResponse.json({ error: "Import Dreamborn impossible pour le moment." }, { status: 500 });
