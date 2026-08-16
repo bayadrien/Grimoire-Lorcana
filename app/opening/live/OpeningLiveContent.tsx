@@ -52,6 +52,7 @@ export default function OpeningLiveContent() {
 
   const [collection, setCollection] = useState<Record<string, number>>({});
   const [otherCollection, setOtherCollection] = useState<Record<string, number>>({});
+  const [openingStats, setOpeningStats] = useState<Record<string, { count: number; last: string }>>({});
 
   // 💱 conversion €
   const toEuro = (usd?: number) =>
@@ -91,6 +92,26 @@ const progress = (cards.length / 12) * 100;
     }
 
     load();
+  }, []);
+
+  useEffect(() => {
+    const activeUser = localStorage.getItem("activeUser") || "adrien";
+    fetch("/api/booster/history", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((history) => {
+        const stats: Record<string, { count: number; last: string }> = {};
+        (Array.isArray(history) ? history : []).filter((opening) => opening.userId === activeUser).forEach((opening) => {
+          (opening.cards || []).forEach((pull: any) => {
+            const id = pull.cardId || pull.card?.id;
+            if (!id) return;
+            const previous = stats[id];
+            const isLater = !previous || new Date(opening.createdAt).getTime() > new Date(previous.last).getTime();
+            stats[id] = { count: (previous?.count || 0) + 1, last: isLater ? opening.createdAt : previous.last };
+          });
+        });
+        setOpeningStats(stats);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -344,6 +365,7 @@ const progress = (cards.length / 12) * 100;
 
   const lastCard = cards[cards.length - 1];
   const isFoilCard = cards.length === 11 || cards.length === 12;
+  const lastCardHistory = lastCard ? openingStats[lastCard.id] : undefined;
 
   return (
     <main className="opening-live">
@@ -485,6 +507,8 @@ const progress = (cards.length / 12) * 100;
         )}
       </div>
 
+      <div className="openingInsights"><div><span>Collection</span><b>{lastCard.quantity || 0} exemplaire{(lastCard.quantity || 0) > 1 ? "s" : ""}</b></div><div><span>Déjà tirée</span><b>{lastCardHistory?.count || 0} fois</b></div><div><span>Dernière fois</span><b>{lastCardHistory?.last ? new Date(lastCardHistory.last).toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) : "Aujourd’hui"}</b></div><div><span>Statut</span><b>{lastCard.isNew ? "Nouvelle ✦" : "Doublon"}</b></div></div>
+
     </div>
   )}
 
@@ -566,7 +590,7 @@ const progress = (cards.length / 12) * 100;
         .liveHero>div { position:relative; z-index:1; }.liveHero p{margin:0;color:#ded5f3;font-size:10px;font-weight:900;letter-spacing:.14em}.liveHero h1{margin:10px 0;font-size:clamp(34px,4vw,48px);letter-spacing:-.065em;line-height:.94}.liveHero h1 em{font-family:Georgia;font-weight:400;color:#ffd265}.liveHero span{font-size:12px;color:#ded7ef;max-width:490px;display:block}.liveHeroPack{width:94px;transform:rotate(5deg);filter:drop-shadow(0 14px 18px rgba(0,0,0,.25));text-align:center;font-size:42px}.liveHeroPack img{width:100%;border-radius:10px;display:block}.liveHeroPack b{display:inline-block;margin-top:7px;padding:4px 7px;border-radius:99px;background:#f6d26c;color:#42300e;font-size:10px;transform:rotate(-5deg)}
         .layout {
           display: grid;
-          grid-template-columns: minmax(0,1.2fr) 340px;
+          grid-template-columns: minmax(0,1fr) 390px;
           gap: 16px;
           max-width: 1120px;
           margin: auto;
@@ -576,7 +600,7 @@ const progress = (cards.length / 12) * 100;
           display: flex;
           flex-direction: column;
           align-items: center;
-          min-height: 430px;
+          min-height: 365px;
           justify-content: center;
           border:1px solid #e9e3ed;
           border-radius:22px;
@@ -603,7 +627,7 @@ const progress = (cards.length / 12) * 100;
 
         .current img {
           width: 100%;
-          max-width: 285px;
+          max-width: 218px;
           border-radius: 15px;
           box-shadow:0 20px 30px rgba(31,21,53,.2);
         }
@@ -669,6 +693,7 @@ const progress = (cards.length / 12) * 100;
           flex-direction: column;
           gap: 8px;
         }
+        .openingInsights{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px;padding-top:11px;border-top:1px solid #ece6ef}.openingInsights div{padding:8px;border-radius:9px;background:#f7f4f9}.openingInsights span,.openingInsights b{display:block}.openingInsights span{font-size:8px;color:#958b9c;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.openingInsights b{font-size:10px;color:#4e435b;margin-top:3px}
 
         .title {
           font-weight: bold;
@@ -842,7 +867,7 @@ const progress = (cards.length / 12) * 100;
     padding: 0 12px 20px;
   }
 
-  .left { min-height: 260px; }
+  .left { min-height: 245px; }
   .right{padding:15px;border-radius:18px}.cardQueue{grid-template-columns:repeat(6,1fr)}.queueTitle{margin-bottom:4px}.awaiting h2{font-size:27px}
   .current img { max-width: 230px; }
   .historyFull { grid-column: span 1; }
