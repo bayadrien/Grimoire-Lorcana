@@ -346,9 +346,13 @@ const progress = (cards.length / 12) * 100;
   const isFoilCard = cards.length === 11 || cards.length === 12;
 
   return (
-    <main className="shell">
-      <AppHeader title="Ouverture" icon="✨" />
-
+    <main className="opening-live">
+      <AppHeader />
+      <div className="liveWrap">
+      <section className="liveHero">
+        <div><p>OUVERTURE EN DIRECT · CHAPITRE {chapter}</p><h1>Révèle ton<br/><em>booster.</em></h1><span>{cards.length ? "La dernière carte apparaît ici. Ajoute la suivante quand tu es prêt." : "Le booster est prêt. Commence par scanner ou rechercher la première carte."}</span></div>
+        <div className="liveHeroPack">{boosterImage ? <img src={boosterImage} alt="Booster Lorcana" /> : "🎁"}<b>{cards.length} / 12</b></div>
+      </section>
       <section className="layout">
 
         {/* LEFT */}
@@ -570,13 +574,19 @@ const progress = (cards.length / 12) * 100;
         </div>
 
       </section>
+      </div>
 
       <style jsx>{`
+        .opening-live { min-height:100vh; background:radial-gradient(circle at 4% 8%,#fff0cb,transparent 24rem),radial-gradient(circle at 97% 43%,#e4dcff,transparent 28rem),#f8f5ef; color:#302a3c; padding-bottom:60px; }
+        .liveWrap { max-width:1120px; margin:auto; padding:26px 18px; }
+        .liveHero { min-height:245px; padding:29px 38px; border-radius:28px; background:linear-gradient(125deg,#241d43,#493477 63%,#7759a9); color:#fff; display:flex; justify-content:space-between; align-items:center; position:relative; overflow:hidden; box-shadow:0 20px 45px rgba(54,37,98,.23); margin-bottom:17px; }
+        .liveHero:after { content:'✦'; position:absolute; right:23%; top:-66px; font:210px Georgia; color:rgba(255,255,255,.06); }
+        .liveHero>div { position:relative; z-index:1; }.liveHero p{margin:0;color:#ded5f3;font-size:10px;font-weight:900;letter-spacing:.14em}.liveHero h1{margin:10px 0;font-size:clamp(34px,4vw,48px);letter-spacing:-.065em;line-height:.94}.liveHero h1 em{font-family:Georgia;font-weight:400;color:#ffd265}.liveHero span{font-size:12px;color:#ded7ef;max-width:490px;display:block}.liveHeroPack{width:112px;transform:rotate(5deg);filter:drop-shadow(0 14px 18px rgba(0,0,0,.25));text-align:center;font-size:42px}.liveHeroPack img{width:100%;border-radius:10px;display:block}.liveHeroPack b{display:inline-block;margin-top:8px;padding:5px 8px;border-radius:99px;background:#f6d26c;color:#42300e;font-size:11px;transform:rotate(-5deg)}
         .layout {
           display: grid;
-          grid-template-columns: 2fr 1fr;
-          gap: 20px;
-          max-width: 900px;
+          grid-template-columns: minmax(0,1.2fr) 340px;
+          gap: 16px;
+          max-width: 1120px;
           margin: auto;
         }
 
@@ -584,6 +594,13 @@ const progress = (cards.length / 12) * 100;
           display: flex;
           flex-direction: column;
           align-items: center;
+          min-height: 430px;
+          justify-content: center;
+          border:1px solid #e9e3ed;
+          border-radius:22px;
+          background:linear-gradient(145deg,#fff,#faf8fc);
+          box-shadow:0 8px 22px rgba(48,36,75,.055);
+          padding:20px;
         }
 
         .right {
@@ -594,8 +611,9 @@ const progress = (cards.length / 12) * 100;
 
         .current img {
           width: 100%;
-          max-width: 320px;
-          border-radius: 12px;
+          max-width: 285px;
+          border-radius: 15px;
+          box-shadow:0 20px 30px rgba(31,21,53,.2);
         }
 
 .searchBox {
@@ -608,7 +626,7 @@ const progress = (cards.length / 12) * 100;
 .scanBtn, .rescanBtn {
   padding: 10px;
   border-radius: 10px;
-  background: #243b64;
+  background: linear-gradient(90deg,#584182,#7756a7);
   color: white;
   font-weight: 700;
 }
@@ -649,10 +667,10 @@ const progress = (cards.length / 12) * 100;
 .scanResult span { opacity: .8; }
 
         .cardInfo {
-          background: white;
-          border-radius: 16px;
+          background: linear-gradient(145deg,#fff,#f8f5fc);
+          border-radius: 18px;
           padding: 14px;
-          box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+          box-shadow: 0 8px 20px rgba(45,34,69,0.08);
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -680,6 +698,10 @@ const progress = (cards.length / 12) * 100;
           gap: 6px;
           overflow-x: auto;
           margin-top: 10px;
+          padding:12px;
+          border-radius:16px;
+          background:rgba(255,255,255,.7);
+          border:1px solid #e8e3eb;
         }
 
         .historyFull img {
@@ -785,7 +807,8 @@ const progress = (cards.length / 12) * 100;
 
 .progressFill {
   height: 100%;
-  background: #c9a86a;
+  background: linear-gradient(90deg,#efb839,#f5d46a);
+  color:#45300d;
   transition: 0.4s;
 }
 
@@ -797,7 +820,7 @@ const progress = (cards.length / 12) * 100;
 
 .finish {
   padding: 12px;
-  background: #333;
+  background: linear-gradient(90deg,#493476,#7152a2);
   color: white;
   border-radius: 10px;
   cursor: pointer;
@@ -805,13 +828,15 @@ const progress = (cards.length / 12) * 100;
 }
 
 @media (max-width: 640px) {
+  .liveWrap { padding:15px 12px 20px; }
+  .liveHero{padding:25px 20px;min-height:210px}.liveHeroPack{width:82px}.liveHero h1{font-size:34px}
   .layout {
     grid-template-columns: 1fr;
     gap: 14px;
     padding: 0 12px 20px;
   }
 
-  .left { min-height: 0; }
+  .left { min-height: 260px; }
   .current img { max-width: 230px; }
   .historyFull { grid-column: span 1; }
   .boosterBox img { width: 58px; }

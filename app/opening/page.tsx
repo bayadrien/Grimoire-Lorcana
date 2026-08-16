@@ -1,206 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import AppHeader from "app/components/AppHeader";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 
-type Chapter = {
-  id: number;
-  image: string;
-};
-
-const chapters: Chapter[] = [
-  { id: 1, image: "/chapters/ch1.jpg" },
-  { id: 2, image: "/chapters/ch2.jpg" },
-  { id: 3, image: "/chapters/ch3.jpg" },
-  { id: 4, image: "/chapters/ch4.jpg" },
-  { id: 5, image: "/chapters/ch5.jpg" },
-  { id: 6, image: "/chapters/ch6.jpg" },
-  { id: 7, image: "/chapters/ch7.jpg" },
-  { id: 8, image: "/chapters/ch8.jpg" },
-  { id: 9, image: "/chapters/ch9.jpg" },
-  { id: 10, image: "/chapters/ch10.jpg" },
-  { id: 11, image: "/chapters/ch11.jpg" },
-  { id: 12, image: "/chapters/ch12.jpg" },
-  { id: 13, image: "/chapters/ch13.jpg" },
-];
-
-const boostersByChapter: Record<number, string[]> = {
-  1: ["/boosters/ch1-1.jpg", "/boosters/ch1-2.jpg", "/boosters/ch1-3.jpg"],
-  2: ["/boosters/ch2-1.jpg", "/boosters/ch2-2.jpg", "/boosters/ch2-3.jpg"],
-  3: ["/boosters/ch3-1.jpg", "/boosters/ch3-2.jpg", "/boosters/ch3-3.jpg"],
-  4: ["/boosters/ch4-1.jpg", "/boosters/ch4-2.jpg", "/boosters/ch4-3.jpg"],
-  5: ["/boosters/ch5-1.jpg", "/boosters/ch5-2.jpg", "/boosters/ch5-3.jpg"],
-  6: ["/boosters/ch6-1.jpg", "/boosters/ch6-2.jpg", "/boosters/ch6-3.jpg"],
-  7: ["/boosters/ch7-1.jpg", "/boosters/ch7-2.jpg", "/boosters/ch7-3.jpg"],
-  8: ["/boosters/ch8-1.jpg", "/boosters/ch8-2.jpg", "/boosters/ch8-3.jpg"],
-  9: ["/boosters/ch9-1.jpg", "/boosters/ch9-2.jpg", "/boosters/ch9-3.jpg"],
-  10: ["/boosters/ch10-1.jpg", "/boosters/ch10-2.jpg", "/boosters/ch10-3.jpg"],
-  11: ["/boosters/ch11-1.jpg", "/boosters/ch11-2.jpg", "/boosters/ch11-3.jpg"],
-  12: ["/boosters/ch12-1.jpg", "/boosters/ch12-2.jpg", "/boosters/ch12-3.jpg"],
-  13: ["/boosters/ch13-1.jpg", "/boosters/ch13-2.jpg", "/boosters/ch13-3.jpg"],
-};
+type Chapter = { id: number; image: string };
+const chapters: Chapter[] = Array.from({ length: 13 }, (_, index) => ({ id: index + 1, image: `/chapters/ch${index + 1}.jpg` }));
+const boostersByChapter: Record<number, string[]> = Object.fromEntries(chapters.map(({ id }) => [id, [1, 2, 3].map((booster) => `/boosters/ch${id}-${booster}.jpg`)]));
 
 export default function OpeningPage() {
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
-  const [selectedBooster, setSelectedBooster] = useState<number | null>(null);
+  const [chapter, setChapter] = useState(13);
+  const [booster, setBooster] = useState(0);
+  const images = boostersByChapter[chapter] || [];
+  const chapterName = CHAPTERS_NAMES_FR[String(chapter)] || `Chapitre ${chapter}`;
+  const selectedImage = images[booster];
+  const readyHref = useMemo(() => `/opening/live?chapter=${chapter}&booster=${encodeURIComponent(selectedImage || "")}`, [chapter, selectedImage]);
 
-  const boosters = selectedChapter ? boostersByChapter[selectedChapter] : [];
-
-  return (
-    <main className="shell">
-      <AppHeader title="Ouverture de booster" icon="✨" />
-
-      <section className="container">
-
-    {/* ===== CHAPITRES ===== */}
-    <h2>Choisissez un chapitre</h2>
-
-    <div className="chaptersGrid">
-      {chapters.map((c) => (
-        <div
-          key={c.id}
-          className={`card ${selectedChapter === c.id ? "active" : ""}`}
-          onClick={() => {
-            setSelectedChapter(c.id);
-            setSelectedBooster(null);
-          }}
-        >
-          <img src={c.image} />
-        </div>
-      ))}
-    </div>
-
-        {/* ===== BOOSTERS ===== */}
-        {selectedChapter && (
-          <>
-            <div className="divider" />
-
-            <h2>Choisissez un booster</h2>
-
-            <div className="row center">
-              {boosters.map((img, i) => (
-                <div
-                  key={i}
-                  className={`booster ${selectedBooster === i ? "active" : ""}`}
-                  onClick={() => setSelectedBooster(i)}
-                >
-                  <img src={img} />
-                </div>
-              ))}
-            </div>
-
-            {/* ===== BOUTON ===== */}
-            {selectedBooster !== null && (
-              <a
-                href={`/opening/live?chapter=${selectedChapter}&booster=${encodeURIComponent(
-                  boosters[selectedBooster]
-                )}`}
-                className="btn"
-              >
-                Ouvrir le booster
-              </a>
-            )}
-          </>
-        )}
-      </section>
-
-      {/* ===== STYLE ===== */}
-      <style jsx>{`
-        .container {
-          max-width: 900px;
-          margin: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .chaptersGrid {
-          display: grid;
-          grid-template-columns: repeat(6, 100px); /* 6 colonnes fixes */
-          justify-content: center; /* centre la grille */
-          gap: 16px;
-        }
-
-        .chapterCard img {
-          width: 100%;
-          height: auto;
-          border-radius: 12px;
-        }
-
-        h2 {
-          font-size: 18px;
-        }
-
-        .row {
-          display: flex;
-          gap: 12px;
-          overflow-x: auto;
-        }
-
-        .row.center {
-          justify-content: center;
-        }
-
-        .card {
-          width: 115px;
-          cursor: pointer;
-          border-radius: 10px;
-          overflow: hidden;
-          background: #fffdf8;
-          transition: 0.2s;
-        }
-
-        .card img {
-          width: 100%;
-          height: auto;
-          object-fit: cover;
-        }
-
-        .card.active {
-          outline: 3px solid #c9a86a;
-        }
-
-        .label {
-          text-align: center;
-          font-size: 12px;
-          padding: 5px;
-          display: none;
-        }
-
-        .booster {
-          width: 120px;
-          cursor: pointer;
-          transition: 0.2s;
-        }
-
-        .booster img {
-          width: 100%;
-          height: 180px;
-          object-fit: cover;
-          border-radius: 10px;
-        }
-
-        .booster.active {
-          outline: 3px solid #c9a86a;
-          transform: scale(1.05);
-        }
-
-        .divider {
-          height: 1px;
-          background: #ddd;
-        }
-
-        .btn {
-          margin: auto;
-          padding: 12px 20px;
-          background: #c9a86a;
-          color: white;
-          border-radius: 10px;
-          text-align: center;
-          width: fit-content;
-        }
-      `}</style>
-    </main>
-  );
+  return <main className="opening-page"><AppHeader /><div className="wrap">
+    <section className="hero"><div><p className="eyebrow">ATELIER D’OUVERTURE</p><h1>Quel secret<br/><em>vas-tu révéler ?</em></h1><p>Choisis le chapitre et le visuel de ton booster. Le Grimoire te guidera ensuite carte par carte.</p></div><div className="hero-pack">{selectedImage ? <img src={selectedImage} alt="Booster sélectionné" /> : <span>🎁</span>}<i>✦</i></div></section>
+    <section className="steps"><span className="done"><b>1</b> Chapitre</span><i /><span className="done"><b>2</b> Booster</span><i /><span><b>3</b> Ouverture</span></section>
+    <section className="picker"><div className="section-head"><div><p className="eyebrow">ÉTAPE 1</p><h2>Choisis un chapitre</h2></div><span>Chapitre <b>{chapter}</b> · {chapterName}</span></div><div className="chapter-strip">{chapters.map((item) => <button key={item.id} className={chapter === item.id ? "selected" : ""} onClick={() => { setChapter(item.id); setBooster(0); }}><img src={item.image} alt={`Chapitre ${item.id}`} /><b>{item.id}</b><small>{CHAPTERS_NAMES_FR[String(item.id)] || "Lorcana"}</small></button>)}</div></section>
+    <section className="picker packs"><div className="section-head"><div><p className="eyebrow">ÉTAPE 2</p><h2>Choisis ton booster</h2></div><span>3 visuels disponibles</span></div><div className="pack-grid">{images.map((image, index) => <button key={image} className={booster === index ? "selected" : ""} onClick={() => setBooster(index)}><div><img src={image} alt={`Booster ${index + 1} du chapitre ${chapter}`} />{booster === index && <i>✓</i>}</div><span>Booster {index + 1}</span></button>)}</div></section>
+    <section className="ready"><div><p className="eyebrow">TON CHOIX</p><h2>Chapitre {chapter} · {chapterName}</h2><p>Prépare les cartes devant toi : tu pourras scanner ou rechercher chaque tirage, puis enregistrer l’ouverture.</p></div><Link href={readyHref}>Commencer l’ouverture <b>→</b></Link></section>
+  </div><style jsx>{styles}</style></main>;
 }
+
+const styles = `.opening-page{min-height:100vh;background:radial-gradient(circle at 7% 7%,#fff0c9,transparent 25rem),radial-gradient(circle at 95% 39%,#e6ddff,transparent 29rem),#f8f5ef;color:#2c2638;padding-bottom:65px}.wrap{max-width:1160px;margin:auto;padding:27px 18px}.hero{min-height:300px;display:flex;align-items:center;justify-content:space-between;gap:35px;padding:35px 43px;border-radius:30px;color:white;background:linear-gradient(120deg,#251d43,#473277 59%,#7d5bad);box-shadow:0 22px 49px rgba(53,37,101,.24);overflow:hidden;position:relative}.hero:after{content:'✦';position:absolute;right:29%;top:-90px;font:300px Georgia;color:rgba(255,255,255,.06)}.eyebrow{font-size:10px;font-weight:900;letter-spacing:.14em;color:#8c8494;margin:0}.hero .eyebrow{color:#e3daf8}.hero h1{margin:11px 0;font-size:clamp(39px,5vw,56px);letter-spacing:-.07em;line-height:.95}.hero h1 em{font-family:Georgia;font-weight:400;color:#ffd168}.hero p:not(.eyebrow){max-width:550px;margin:0;color:#dfd7f1;font-size:14px;line-height:1.55}.hero-pack{width:150px;position:relative;z-index:1;transform:rotate(5deg);filter:drop-shadow(0 18px 21px rgba(0,0,0,.25))}.hero-pack img{width:100%;border-radius:13px}.hero-pack i{position:absolute;right:-24px;top:-22px;color:#ffe18f;font-size:35px;font-style:normal}.steps{display:flex;align-items:center;justify-content:center;gap:9px;margin:19px 0;color:#958c9d;font-size:11px;font-weight:800}.steps span{display:flex;align-items:center;gap:6px}.steps b{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:#e7e1ea}.steps .done{color:#5a4283}.steps .done b{background:#70539f;color:#fff}.steps>i{height:1px;width:54px;background:#dfd9e4}.picker{padding:23px;margin-top:15px;border:1px solid #e9e3ec;border-radius:22px;background:rgba(255,255,255,.86);box-shadow:0 8px 22px rgba(48,37,75,.055)}.section-head{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:15px}.section-head h2{font-size:22px;letter-spacing:-.05em;margin:6px 0 0}.section-head>span{padding:7px 9px;border-radius:99px;background:#f5f2f8;color:#877e90;font-size:10px}.section-head>span b{color:#513b7c}.chapter-strip{display:grid;grid-template-columns:repeat(13,1fr);gap:7px;overflow-x:auto;padding:3px}.chapter-strip button,.pack-grid button{border:0;background:transparent;cursor:pointer;color:#4a4254;font:inherit;text-align:left}.chapter-strip button{min-width:66px;position:relative;padding:4px;border-radius:10px;transition:transform .18s,background .18s}.chapter-strip button:hover{transform:translateY(-3px)}.chapter-strip img{width:100%;aspect-ratio:.84;object-fit:cover;border-radius:7px;display:block;filter:saturate(.75);opacity:.73}.chapter-strip b{position:absolute;top:8px;left:8px;width:19px;height:19px;display:grid;place-items:center;border-radius:50%;background:rgba(25,18,41,.75);color:#fff;font-size:10px}.chapter-strip small{display:block;margin:5px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:8px;color:#8c8394}.chapter-strip .selected{background:#eee7f8;box-shadow:0 0 0 2px #7457a5}.chapter-strip .selected img{filter:none;opacity:1}.packs{background:linear-gradient(135deg,#fff,#fdfaff)}.pack-grid{display:flex;justify-content:center;gap:24px}.pack-grid button{padding:9px;border-radius:16px;text-align:center;transition:transform .2s}.pack-grid button:hover{transform:translateY(-5px)}.pack-grid button>div{position:relative;width:150px;border-radius:12px;overflow:hidden;box-shadow:0 10px 21px rgba(39,29,64,.13)}.pack-grid img{width:100%;aspect-ratio:.69;object-fit:cover;display:block}.pack-grid i{position:absolute;right:8px;top:8px;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#f9d365;color:#3f2e11;font-style:normal;font-weight:900}.pack-grid button>span{display:block;margin-top:8px;font-size:11px;font-weight:900}.pack-grid .selected{background:#f2ebfc;box-shadow:0 0 0 2px #7658a4}.ready{display:flex;align-items:center;justify-content:space-between;gap:25px;margin-top:16px;padding:23px 27px;border:1px solid #eadbb7;border-radius:22px;background:linear-gradient(115deg,#fff9e8,#faf7ff)}.ready h2{font-size:21px;letter-spacing:-.04em;margin:5px 0}.ready p:not(.eyebrow){max-width:640px;margin:0;color:#766d7c;font-size:12px;line-height:1.5}.ready a{display:inline-flex;gap:10px;align-items:center;padding:13px 16px;border-radius:12px;background:#f3c85a;color:#43310e;text-decoration:none;font-size:12px;font-weight:900;white-space:nowrap;box-shadow:0 8px 16px rgba(202,153,37,.18)}.ready a b{font-size:18px}@media(max-width:800px){.chapter-strip{grid-template-columns:repeat(7,1fr)}.hero{padding:31px}.pack-grid{justify-content:flex-start;overflow-x:auto;padding-bottom:4px}}@media(max-width:560px){.wrap{padding:15px 12px}.hero{min-height:250px;padding:27px 21px}.hero h1{font-size:38px}.hero-pack{width:95px}.steps{font-size:9px}.steps>i{width:25px}.picker{padding:18px 12px;border-radius:18px}.section-head h2{font-size:19px}.section-head>span{display:none}.chapter-strip{grid-template-columns:repeat(5,1fr);gap:6px}.chapter-strip button{min-width:0}.pack-grid{gap:10px}.pack-grid button>div{width:108px}.ready{align-items:flex-start;flex-direction:column;padding:20px;border-radius:18px}.ready a{width:100%;justify-content:center}}`;
