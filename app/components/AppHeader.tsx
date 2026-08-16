@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 type User = "adrien" | "angele";
 type SearchCard = { id:string; name?:string|null; name_fr?:string|null; imageUrl?:string|null; setCode?:string|null; collection_number?:string|null; ink?:string|null; rarity?:string|null; quantity:number };
+type Notification = { id:string; icon:string; title:string; text:string; href:string; createdAt:string };
 
 export default function AppHeader() {
   const pathname = usePathname();
@@ -15,6 +16,8 @@ export default function AppHeader() {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<SearchCard[]>([]);
   const [preview, setPreview] = useState<SearchCard | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [noticeOpen, setNoticeOpen] = useState(false);
 
   useEffect(() => {
     const u = (localStorage.getItem("activeUser") as User) || "adrien";
@@ -30,6 +33,10 @@ export default function AppHeader() {
     }, 180);
     return () => window.clearTimeout(timer);
   }, [search, activeUser]);
+
+  useEffect(() => {
+    fetch(`/api/notifications?userId=${activeUser}`, { cache: "no-store" }).then((response) => response.ok ? response.json() : { notifications: [] }).then((data) => setNotifications(data.notifications || [])).catch(() => setNotifications([]));
+  }, [activeUser]);
 
   function changeUser(u: User) {
     setActiveUser(u);
@@ -87,6 +94,10 @@ export default function AppHeader() {
 
         {/* RIGHT */}
         <div className="appNavActions">
+          <div className="notificationWrap">
+            <button className="notificationButton" aria-label="Ouvrir les notifications" onClick={() => setNoticeOpen((open) => !open)}>♢{notifications.length > 0 && <i>{Math.min(notifications.length, 9)}</i>}</button>
+            {noticeOpen && <div className="notificationPanel"><div><p>ACTUALITÉS DU GRIMOIRE</p><button onClick={() => setNoticeOpen(false)}>×</button></div>{notifications.length ? notifications.map((notice) => <Link href={notice.href} onClick={() => setNoticeOpen(false)} key={notice.id}><span>{notice.icon}</span><p><b>{notice.title}</b><small>{notice.text}</small></p></Link>) : <em>Tout est calme pour le moment ✦</em>}</div>}
+          </div>
           <select
             value={activeUser}
             onChange={(e) =>
@@ -137,7 +148,7 @@ export default function AppHeader() {
         .appNavBrand{display:flex;align-items:center;gap:10px;padding:0 4px}.appNavLogo{width:40px;height:40px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(135deg,#ffe496,#e9a934);color:#3f2610;font-size:21px;box-shadow:0 8px 18px rgba(231,174,50,.3)}.appNavBrandText{line-height:1}.appNavTitle{font-family:Georgia,serif;font-weight:700;font-size:19px;letter-spacing:-.045em;color:#fff7db}.appNavSubtitle{margin-top:5px;font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#c4b9df}
         .appNavLinks{display:flex;justify-content:center;gap:2px;min-width:0;padding:4px;border-radius:15px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.09)}.appNavLink{display:inline-flex;align-items:center;gap:6px;padding:9px 11px;border-radius:11px;color:#dfd8ec;text-decoration:none;white-space:nowrap;font-size:12px;font-weight:800;transition:background .18s ease,color .18s ease,transform .18s ease}.appNavLink:hover{color:#fff;background:rgba(255,255,255,.1);transform:translateY(-1px)}.appNavLink.active{color:#30213f;background:linear-gradient(135deg,#ffe384,#eeb449);box-shadow:0 6px 15px rgba(0,0,0,.2)}
         .globalSearch{position:relative;display:flex;align-items:center;gap:6px;width:205px;padding:0 11px;border:1px solid rgba(255,255,255,.16);border-radius:13px;background:rgba(255,255,255,.09);color:#e9dff7}.globalSearch input{width:100%;min-width:0;height:34px;border:0;outline:0;background:transparent;padding:0;color:#fff;font:inherit;font-size:11px}.globalSearch input::placeholder{color:#c7bbd6}.searchResults{position:absolute;top:45px;right:0;width:340px;max-height:430px;overflow:auto;border:1px solid rgba(88,62,127,.15);border-radius:16px;background:#fffcf8;padding:7px;box-shadow:0 20px 48px rgba(26,17,47,.28);z-index:1002}.searchResults button{width:100%;display:flex;align-items:center;gap:10px;padding:7px;border:0;border-radius:11px;background:transparent;text-align:left;cursor:pointer;color:#302641}.searchResults button:hover{background:#f3edf8}.searchResults img{width:31px;height:44px;object-fit:cover;border-radius:5px;background:#eee9f0}.searchResults b,.searchResults small{display:block}.searchResults b{font-size:11px}.searchResults small{margin-top:3px;font-size:9px;color:#847994}
-        .appNavActions{display:flex;align-items:center;gap:8px}.appNavActions select{height:36px;border:1px solid rgba(255,255,255,.15);padding:0 25px 0 11px;border-radius:12px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;font:700 12px inherit}.appNavActions option{color:#302641}.appNavBurger{display:none;width:38px;height:36px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(255,255,255,.1);color:white;font-size:18px;cursor:pointer}
+        .appNavActions{display:flex;align-items:center;gap:8px}.appNavActions select{height:36px;border:1px solid rgba(255,255,255,.15);padding:0 25px 0 11px;border-radius:12px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;font:700 12px inherit}.appNavActions option{color:#302641}.appNavBurger{display:none;width:38px;height:36px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(255,255,255,.1);color:white;font-size:18px;cursor:pointer}.notificationWrap{position:relative}.notificationButton{position:relative;width:36px;height:36px;border:1px solid rgba(255,255,255,.15);border-radius:12px;background:rgba(255,255,255,.1);color:#fff;font-size:20px;cursor:pointer}.notificationButton i{position:absolute;right:-4px;top:-4px;min-width:15px;height:15px;padding:0 3px;display:grid;place-items:center;border:2px solid #2a1d46;border-radius:99px;background:#f4c959;color:#35223b;font-size:8px;font-style:normal;font-weight:900}.notificationPanel{position:absolute;right:0;top:45px;width:330px;padding:10px;border:1px solid rgba(96,72,135,.2);border-radius:17px;background:#fffdfb;color:#372c44;box-shadow:0 22px 50px rgba(18,10,38,.27)}.notificationPanel>div{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 8px}.notificationPanel>div p{margin:0;color:#867a96;font-size:9px;font-weight:900;letter-spacing:.11em}.notificationPanel>div button{width:24px;height:24px;border:0;border-radius:8px;background:#f0ebf5;color:#554666;font-size:17px;cursor:pointer}.notificationPanel a{display:flex;gap:9px;padding:9px 6px;border-top:1px solid #eee9f0;color:inherit;text-decoration:none}.notificationPanel a:hover{background:#f7f3fa}.notificationPanel a>span{width:29px;height:29px;display:grid;place-items:center;border-radius:9px;background:#f0eafa;font-size:15px}.notificationPanel p{margin:0}.notificationPanel b,.notificationPanel small{display:block}.notificationPanel b{font-size:11px}.notificationPanel small{margin-top:3px;color:#8c8294;font-size:9px;line-height:1.3}.notificationPanel em{display:block;padding:18px 7px 8px;color:#8c8294;font-size:11px;font-style:normal}
         .appNavOverlay{position:fixed;inset:0;z-index:1200;background:rgba(15,8,28,.52);backdrop-filter:blur(5px)}.appNavMenu{position:absolute;right:12px;top:12px;width:min(320px,calc(100% - 24px));padding:18px;border:1px solid rgba(255,255,255,.25);border-radius:22px;background:linear-gradient(150deg,#302151,#1b132f);box-shadow:0 22px 60px rgba(14,8,26,.35);display:flex;flex-direction:column;gap:5px}.appNavMenu a{padding:12px;border-radius:12px;color:#f9f4ff;text-decoration:none;font-weight:800}.appNavMenu a:hover{background:rgba(255,255,255,.1)}.appNavMenuClose{align-self:flex-end;width:31px;height:31px;border:0;border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer}
         .quickOverlay{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:18px;background:rgba(18,10,32,.62);backdrop-filter:blur(6px)}.quickCard{position:relative;display:grid;grid-template-columns:160px minmax(0,1fr);gap:19px;width:min(510px,100%);padding:18px;border:1px solid rgba(255,255,255,.7);border-radius:22px;background:linear-gradient(145deg,#fffdf9,#f1ebf8);box-shadow:0 25px 60px rgba(12,8,21,.35)}.quickCard>img{width:160px;border-radius:11px;box-shadow:0 12px 23px rgba(43,30,70,.23)}.quickCard p{font-size:9px;font-weight:900;letter-spacing:.1em;color:#8c809a;margin:8px 0}.quickCard h2{margin:0;font-size:25px;letter-spacing:-.05em}.quickCard span,.quickCard strong,.quickCard a{display:block;margin-top:9px;font-size:11px}.quickCard span{color:#857c90}.quickCard strong{color:#4c8762}.quickCard a{color:#694a9b;font-weight:900;text-decoration:none}.closeQuick{position:absolute;right:10px;top:8px;border:0;background:#eee8f4;border-radius:50%;width:27px;height:27px;font-size:20px;cursor:pointer;color:#4c4160}
         @media(max-width:1120px){.appNav{grid-template-columns:auto 1fr auto}.appNavLinks{display:none}.appNavBurger{display:grid;place-items:center}.globalSearch{justify-self:end;width:min(250px,40vw)}}

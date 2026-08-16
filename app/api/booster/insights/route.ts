@@ -44,6 +44,14 @@ export async function GET(request: Request) {
     }
 
     const recentDays = [...daily.entries()].slice(-14).map(([date, value]) => ({ date, ...value, value: Number(value.value.toFixed(2)) }));
+    const activity = Array.from({ length: 35 }, (_, index) => {
+      const date = new Date();
+      date.setHours(12, 0, 0, 0);
+      date.setDate(date.getDate() - (34 - index));
+      const key = dayKey(date);
+      const value = daily.get(key) || { boosters: 0, cards: 0, value: 0 };
+      return { date: key, ...value, value: Number(value.value.toFixed(2)) };
+    });
     const byChapter = [...chapters.values()].map((value) => ({ ...value, value: Number(value.value.toFixed(2)), average: value.boosters ? Number((value.value / value.boosters).toFixed(2)) : 0 })).sort((a, b) => b.value - a.value);
     const bestPull = [...pulls].sort((a, b) => b.value - a.value)[0] || null;
     const latest = [...pulls].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5);
@@ -57,6 +65,7 @@ export async function GET(request: Request) {
       averagePerCard: cards ? Number((totalValue / cards).toFixed(2)) : 0,
       bestPull,
       recentDays,
+      activity,
       byChapter,
       latest,
     });
