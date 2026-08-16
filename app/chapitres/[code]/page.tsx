@@ -35,6 +35,8 @@ type ColQty = {
   isEnglish?: boolean;
 };
 
+type CollectionView = "all" | "missing" | "owned" | "doubles";
+
 /* ================= CONST ================= */
 
 const PLACEHOLDER =
@@ -69,7 +71,8 @@ export default function ChapitreDetail() {
     Record<string, "normal" | "foil">
   >({});
   const [q, setQ] = useState("");
-  const [onlyMissing, setOnlyMissing] = useState(false);
+  const [collectionView, setCollectionView] = useState<CollectionView>("all");
+  const [visibleCount, setVisibleCount] = useState(48);
 
   /* ================= USER ================= */
 
@@ -196,12 +199,13 @@ export default function ChapitreDetail() {
           rarityMatch
         );
       })
-      .filter((c) =>
-        onlyMissing
-          ? (collection[c.id]?.normal ?? 0) +
-              (collection[c.id]?.foil ?? 0) === 0
-          : true
-      );
+      .filter((c) => {
+        const quantity = (collection[c.id]?.normal ?? 0) + (collection[c.id]?.foil ?? 0);
+        if (collectionView === "missing") return quantity === 0;
+        if (collectionView === "owned") return quantity > 0;
+        if (collectionView === "doubles") return quantity > 1;
+        return true;
+      });
 
 console.log("SEARCH =", search);
 console.log("CARD SAMPLE =", cards[0]);
@@ -219,7 +223,13 @@ console.log("CARD SAMPLE =", cards[0]);
       if (aOwned === bOwned) return 0;
       return aOwned ? -1 : 1;
     });
-  }, [cards, chapterCode, q, query, onlyMissing, collection]);
+  }, [cards, chapterCode, q, query, collectionView, collection]);
+
+  useEffect(() => {
+    setVisibleCount(48);
+  }, [chapterCode, q, query, collectionView]);
+
+  const visibleCards = chapterCards.slice(0, visibleCount);
 
   const chapterProgress = useMemo(() => {
     const allCards = cards.filter((card) => Number(card.setCode) === chapterCode);
@@ -280,7 +290,7 @@ console.log("CARD SAMPLE =", cards[0]);
         </div>
         <div className="chapterQuickStats">
           <span>✅ {chapterProgress.owned} possédées</span>
-          <button onClick={() => setOnlyMissing(true)}>⬜ {chapterProgress.missing} manquantes</button>
+          <button onClick={() => setCollectionView("missing")}>⬜ {chapterProgress.missing} manquantes</button>
           <span>🎁 {chapterProgress.doubles} doublons</span>
         </div>
       </section>
@@ -292,15 +302,22 @@ console.log("CARD SAMPLE =", cards[0]);
           onChange={(e) => setQ(e.target.value)}
           placeholder="🔎 Rechercher…"
         />
-
-        <label className="pill">
-          <input
-            type="checkbox"
-            checked={onlyMissing}
-            onChange={(e) => setOnlyMissing(e.target.checked)}
-          />
-          Manquantes
-        </label>
+        <div className="viewFilters" aria-label="Filtrer la collection">
+          {([
+            ["all", "Toutes"],
+            ["missing", "Manquantes"],
+            ["owned", "Possédées"],
+            ["doubles", "Doublons"],
+          ] as [CollectionView, string][]).map(([view, label]) => (
+            <button
+              key={view}
+              className={collectionView === view ? "active" : ""}
+              onClick={() => setCollectionView(view)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {query && (
@@ -310,8 +327,13 @@ console.log("CARD SAMPLE =", cards[0]);
         </div>
       )}
 
+      <div className="gallerySummary">
+        <strong>{chapterCards.length}</strong> carte{chapterCards.length > 1 ? "s" : ""}
+        {visibleCards.length < chapterCards.length && <> · {visibleCards.length} affichées</>}
+      </div>
+
       <section className="chapterGrid">
-        {chapterCards.map((c, index) => {
+        {visibleCards.map((c, index) => {
           console.log("CARD ID =", c.id, c.name);
           const qtys = collection[c.id] ?? { normal: 0, foil: 0 };
           const total = qtys.normal + qtys.foil;
@@ -319,7 +341,7 @@ console.log("CARD SAMPLE =", cards[0]);
           const previous =
             index > 0
               ? (() => {
-                  const prev = collection[chapterCards[index - 1].id] ?? {
+                  const prev = collection[visibleCards[index - 1].id] ?? {
                     normal: 0,
                     foil: 0,
                   };
@@ -462,6 +484,14 @@ console.log("CARD SAMPLE =", cards[0]);
         })}
       </section>
 
+      {visibleCards.length < chapterCards.length && (
+        <div className="loadMore">
+          <button onClick={() => setVisibleCount((count) => count + 48)}>
+            Afficher 48 cartes de plus
+          </button>
+        </div>
+      )}
+
       <style jsx>{`
         .chapterHero {
           display: flex;
@@ -477,11 +507,13 @@ console.log("CARD SAMPLE =", cards[0]);
 
         .chapterProgressPanel {
           margin-top: 14px;
-          padding: 16px 18px;
-          border-radius: 20px;
-          background: linear-gradient(135deg, #243b64, #3d5f94);
+          padding: 18px 20px;
+          border-radius: 22px;
+          background:
+            radial-gradient(circle at 85% 20%, rgba(255,209,102,.2), transparent 28%),
+            linear-gradient(135deg, #20375f, #416aa4);
           color: white;
-          box-shadow: 0 14px 30px rgba(36,59,100,.22);
+          box-shadow: 0 14px 30px rgba(36,59,100,.22), inset 0 1px 0 rgba(255,255,255,.16);
         }
 
         .chapterProgressHeadline { display: flex; align-items: end; justify-content: space-between; }
@@ -498,20 +530,38 @@ console.log("CARD SAMPLE =", cards[0]);
         .chapterFilters {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           flex-wrap: wrap;
           margin-top: 14px;
-          padding: 10px;
+          padding: 11px 12px;
           border-radius: 18px;
           background: rgba(255,255,255,.58);
           border: 1px solid rgba(43,36,28,.10);
         }
 
+        .viewFilters { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+        .viewFilters button, .loadMore button {
+          border: 1px solid rgba(43,36,28,.12);
+          background: rgba(255,255,255,.76);
+          color: #554837;
+          padding: 8px 11px;
+          border-radius: 999px;
+          font-weight: 750;
+          font-size: 12px;
+          cursor: pointer;
+        }
+        .viewFilters button.active { background: #243b64; color: #fff; border-color: #243b64; }
+
+        .gallerySummary { margin-top: 15px; font-size: 13px; color: #766a5a; }
+        .gallerySummary strong { color: #243b64; font-size: 16px; }
+
         .chapterGrid {
           display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
-          gap: 14px;
-          margin-top: 16px;
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 10px;
+          padding: 5px;
+          overflow: visible;
         }
 
         .chapterGrid :global(.card) { border-radius: 16px; }
@@ -519,17 +569,26 @@ console.log("CARD SAMPLE =", cards[0]);
         .chapterGrid :global(.qtyPill.unified) { top: 8px; left: 8px; transform: scale(.88); transform-origin: top left; }
         .chapterGrid :global(.corner) { transform: scale(.88); transform-origin: top right; }
         .chapterGrid :global(.otherBadge) { transform: scale(.85); transform-origin: bottom right; }
+        .chapterGrid :global(.card:hover) {
+          transform: translateY(-10px) scale(1.16);
+          z-index: 20;
+          box-shadow: 0 22px 45px rgba(22,31,48,.34);
+        }
 
-        @media (max-width: 1050px) { .chapterGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+        .loadMore { display: flex; justify-content: center; margin: 22px 0 8px; }
+        .loadMore button { padding: 11px 18px; background: #243b64; color: white; border-color: #243b64; }
+
+        @media (max-width: 1050px) { .chapterGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
         @media (max-width: 780px) {
           .chapterHero { align-items: flex-start; flex-direction: column; }
           .controls { width: 100%; justify-content: flex-start; }
-          .chapterGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+          .chapterGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
         }
         @media (max-width: 520px) {
           .chapterProgressPanel { padding: 14px; }
-          .chapterGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+          .chapterGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
           .chapterFilters :global(input.pill) { min-width: 0; width: 100%; }
+          .chapterGrid :global(.card:hover) { transform: translateY(-3px) scale(1.03); }
         }
       `}</style>
     </main>
