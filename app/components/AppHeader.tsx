@@ -24,7 +24,7 @@ export default function AppHeader() {
   }
 
   const navItems = [
-    { href: "/", label: "Cartes", icon: "🎴" },
+    { href: "/", label: "Accueil", icon: "✨" },
     { href: "/chapitres", label: "Chapitres", icon: "📚" },
     { href: "/stats", label: "Stats", icon: "📊" },
     { href: "/echange", label: "Échange", icon: "🤝" },
