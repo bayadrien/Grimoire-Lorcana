@@ -416,6 +416,7 @@ const progress = (cards.length / 12) * 100;
     <button className="undoBtn" onClick={removeLastCard}>
       ↩️ Annuler
     </button>
+    {suggestions.length > 0 && <div className="suggestions">{suggestions.slice(0, 5).map((c, i) => <button key={c.id || i} className="suggestionItem" onClick={() => { const enriched = enrichCard(c); setCards((prev) => [...prev, enriched]); setInput(""); setSuggestions([]); }}><img src={c.imageUrl} alt="" /><span><b>{c.name_fr || c.name}</b><small>#{c.collection_number || "—"}</small></span><i>Ajouter</i></button>)}</div>}
   </div>
 
   {scannerOpen && (
@@ -454,27 +455,6 @@ const progress = (cards.length / 12) * 100;
         </div>
       ))}
       <button className="rescanBtn" onClick={captureAndScan} type="button">🔄 Rescanner</button>
-    </div>
-  )}
-
-  {/* SUGGESTIONS */}
-  {suggestions.length > 0 && (
-    <div className="suggestions">
-      {suggestions.map((c, i) => (
-        <div
-          key={i}
-          className="suggestionItem"
-          onClick={() => {
-            const enriched = enrichCard(c);
-            setCards((prev) => [...prev, enriched]);
-            setInput("");
-            setSuggestions([]);
-          }}
-        >
-          <img src={c.imageUrl} />
-          <span>{c.name}</span>
-        </div>
-      ))}
     </div>
   )}
 
@@ -583,7 +563,7 @@ const progress = (cards.length / 12) * 100;
         .liveWrap { max-width:1120px; margin:auto; padding:26px 18px; }
         .liveHero { min-height:245px; padding:29px 38px; border-radius:28px; background:linear-gradient(125deg,#241d43,#493477 63%,#7759a9); color:#fff; display:flex; justify-content:space-between; align-items:center; position:relative; overflow:hidden; box-shadow:0 20px 45px rgba(54,37,98,.23); margin-bottom:17px; }
         .liveHero:after { content:'✦'; position:absolute; right:23%; top:-66px; font:210px Georgia; color:rgba(255,255,255,.06); }
-        .liveHero>div { position:relative; z-index:1; }.liveHero p{margin:0;color:#ded5f3;font-size:10px;font-weight:900;letter-spacing:.14em}.liveHero h1{margin:10px 0;font-size:clamp(34px,4vw,48px);letter-spacing:-.065em;line-height:.94}.liveHero h1 em{font-family:Georgia;font-weight:400;color:#ffd265}.liveHero span{font-size:12px;color:#ded7ef;max-width:490px;display:block}.liveHeroPack{width:112px;transform:rotate(5deg);filter:drop-shadow(0 14px 18px rgba(0,0,0,.25));text-align:center;font-size:42px}.liveHeroPack img{width:100%;border-radius:10px;display:block}.liveHeroPack b{display:inline-block;margin-top:8px;padding:5px 8px;border-radius:99px;background:#f6d26c;color:#42300e;font-size:11px;transform:rotate(-5deg)}
+        .liveHero>div { position:relative; z-index:1; }.liveHero p{margin:0;color:#ded5f3;font-size:10px;font-weight:900;letter-spacing:.14em}.liveHero h1{margin:10px 0;font-size:clamp(34px,4vw,48px);letter-spacing:-.065em;line-height:.94}.liveHero h1 em{font-family:Georgia;font-weight:400;color:#ffd265}.liveHero span{font-size:12px;color:#ded7ef;max-width:490px;display:block}.liveHeroPack{width:94px;transform:rotate(5deg);filter:drop-shadow(0 14px 18px rgba(0,0,0,.25));text-align:center;font-size:42px}.liveHeroPack img{width:100%;border-radius:10px;display:block}.liveHeroPack b{display:inline-block;margin-top:7px;padding:4px 7px;border-radius:99px;background:#f6d26c;color:#42300e;font-size:10px;transform:rotate(-5deg)}
         .layout {
           display: grid;
           grid-template-columns: minmax(0,1.2fr) 340px;
@@ -746,19 +726,28 @@ const progress = (cards.length / 12) * 100;
 
 .suggestions {
   position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
   width: 100%;
   background: white;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-  z-index: 10;
-  margin-top: 5px;
+  border: 1px solid #e5dfe9;
+  border-radius: 12px;
+  box-shadow: 0 16px 30px rgba(37,27,57,0.18);
+  z-index: 30;
+  overflow: auto;
+  max-height: 310px;
 }
 
         .suggestionItem {
           display: flex;
+          align-items:center;
+          width:100%;
+          border:0;
+          background:white;
           gap: 8px;
           padding: 8px;
           cursor: pointer;
+          text-align:left;
         }
 
         .suggestionItem img {
@@ -766,8 +755,9 @@ const progress = (cards.length / 12) * 100;
         }
 
         .suggestionItem:hover {
-          background: #f7edd9;
+          background: #f5f1f9;
         }
+        .suggestionItem span{flex:1;min-width:0}.suggestionItem span b,.suggestionItem span small{display:block}.suggestionItem span b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.suggestionItem span small{font-size:9px;color:#92899a;margin-top:2px}.suggestionItem i{font-size:9px;font-weight:900;font-style:normal;color:#69508f}
 
         .badges {
           display: flex;
