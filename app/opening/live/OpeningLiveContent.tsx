@@ -390,11 +390,12 @@ const progress = (cards.length / 12) * 100;
                   ✨ {lastCard?.foil ? "Foil activée" : "Mettre en foil"}
                 </button>
               )}
-              <section className="stageStats"><div className="stageStatsHead"><span>FICHE DU TIRAGE</span><b>{lastCard.name_fr || lastCard.name}</b></div><div className="stageStatsGrid"><article><span>Valeur normale</span><b>💰 {toEuro(lastCard.usd)}</b></article><article><span>Valeur foil</span><b>✨ {toEuro(lastCard.usd_foil)}</b></article><article><span>Dans la collection</span><b>{lastCard.quantity || 0} exemplaire{(lastCard.quantity || 0) > 1 ? "s" : ""}</b></article><article><span>Déjà tirée</span><b>{lastCardHistory?.count || 0} fois</b></article><article><span>Dernière apparition</span><b>{lastCardHistory?.last ? new Date(lastCardHistory.last).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "Aujourd’hui"}</b></article><article><span>Pour l’échange</span><b>{lastCard.forOtherUser ? "Utile 🎁" : "À garder"}</b></article></div></section>
             </>
           )}
           {!lastCard && <div className="awaiting"><span>✦</span><p>LE BOOSTER EST PRÊT</p><h2>Révèle la<br/><em>première carte.</em></h2><small>Scanne-la ou cherche-la manuellement à droite.</small></div>}
         </div>
+
+        {lastCard && <section className="stageStats"><div className="stageStatsHead"><div><span>FICHE DU TIRAGE</span><b>{lastCard.name_fr || lastCard.name}</b><small>#{lastCard.collection_number || "—"} · Chapitre {chapter}</small></div><strong>{lastCard.isNew ? "Nouvelle carte ✦" : "Doublon"}</strong></div><div className="stageStatsGrid"><article><span>Valeur normale</span><b>💰 {toEuro(lastCard.usd)}</b></article><article><span>Valeur foil</span><b>✨ {toEuro(lastCard.usd_foil)}</b></article><article><span>Dans la collection</span><b>{lastCard.quantity || 0} exemplaire{(lastCard.quantity || 0) > 1 ? "s" : ""}</b></article><article><span>Déjà tirée</span><b>{lastCardHistory?.count || 0} fois</b></article><article><span>Dernière apparition</span><b>{lastCardHistory?.last ? new Date(lastCardHistory.last).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "Aujourd’hui"}</b></article><article><span>Pour l’échange</span><b>{lastCard.forOtherUser ? "Utile 🎁" : "À garder"}</b></article></div><div className="stageNote">Cette carte sera ajoutée à ta collection à la fin de l’ouverture.</div></section>}
 
         {/* RIGHT */}
         <div className="right">
@@ -591,8 +592,8 @@ const progress = (cards.length / 12) * 100;
         .liveHero>div { position:relative; z-index:1; }.liveHero p{margin:0;color:#ded5f3;font-size:10px;font-weight:900;letter-spacing:.14em}.liveHero h1{margin:10px 0;font-size:clamp(34px,4vw,48px);letter-spacing:-.065em;line-height:.94}.liveHero h1 em{font-family:Georgia;font-weight:400;color:#ffd265}.liveHero span{font-size:12px;color:#ded7ef;max-width:490px;display:block}.liveHeroPack{width:94px;transform:rotate(5deg);filter:drop-shadow(0 14px 18px rgba(0,0,0,.25));text-align:center;font-size:42px}.liveHeroPack img{width:100%;border-radius:10px;display:block}.liveHeroPack b{display:inline-block;margin-top:7px;padding:4px 7px;border-radius:99px;background:#f6d26c;color:#42300e;font-size:10px;transform:rotate(-5deg)}
         .layout {
           display: grid;
-          grid-template-columns: minmax(0,1fr) 390px;
-          gap: 16px;
+          grid-template-columns: 305px minmax(0,1fr) 360px;
+          gap: 15px;
           max-width: 1120px;
           margin: auto;
         }
@@ -601,13 +602,13 @@ const progress = (cards.length / 12) * 100;
           display: flex;
           flex-direction: column;
           align-items: center;
-          min-height: 365px;
-          justify-content: center;
+          min-height: 0;
+          justify-content: flex-start;
           border:1px solid #e9e3ed;
           border-radius:22px;
           background:linear-gradient(145deg,#fff,#faf8fc);
           box-shadow:0 8px 22px rgba(48,36,75,.055);
-          padding:20px;
+          padding:18px;
           position:relative;
           overflow:hidden;
         }
@@ -628,11 +629,11 @@ const progress = (cards.length / 12) * 100;
 
         .current img {
           width: 100%;
-          max-width: 218px;
+          max-width: 100%;
           border-radius: 15px;
           box-shadow:0 20px 30px rgba(31,21,53,.2);
         }
-        .stageStats{position:relative;z-index:1;width:min(100%,620px);margin-top:20px;padding:15px;border:1px solid #e9e2ef;border-radius:17px;background:rgba(255,255,255,.88);box-shadow:0 8px 18px rgba(45,33,70,.06)}.stageStatsHead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:11px}.stageStatsHead span{font-size:9px;font-weight:900;letter-spacing:.11em;color:#8d8398}.stageStatsHead b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stageStatsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stageStatsGrid article{padding:10px;border-radius:10px;background:linear-gradient(135deg,#faf7fc,#f3edf8)}.stageStatsGrid span,.stageStatsGrid b{display:block}.stageStatsGrid span{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#978da0}.stageStatsGrid b{margin-top:4px;font-size:12px;color:#443653;line-height:1.2}
+        .stageStats{align-self:start;padding:23px;border:1px solid #e7dfec;border-radius:22px;background:linear-gradient(145deg,#fff,#f7f2fb);box-shadow:0 11px 26px rgba(45,33,70,.075)}.stageStatsHead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:18px}.stageStatsHead span,.stageStatsHead b,.stageStatsHead small{display:block}.stageStatsHead span{font-size:9px;font-weight:900;letter-spacing:.11em;color:#8d8398}.stageStatsHead b{margin-top:7px;font-size:24px;letter-spacing:-.05em}.stageStatsHead small{margin-top:4px;color:#93899a;font-size:11px}.stageStatsHead strong{padding:7px 9px;border-radius:99px;background:#ddf5e8;color:#3f8060;font-size:10px;white-space:nowrap}.stageStatsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stageStatsGrid article{padding:13px;border-radius:13px;background:rgba(239,232,247,.72);border:1px solid rgba(224,215,235,.8)}.stageStatsGrid span,.stageStatsGrid b{display:block}.stageStatsGrid span{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#94899e}.stageStatsGrid b{margin-top:5px;font-size:15px;color:#443653;line-height:1.2}.stageNote{margin-top:15px;padding:10px;border-radius:10px;background:#fff8e8;color:#80672c;font-size:10px;line-height:1.4}
 
 .searchBox {
   position: relative;
@@ -695,6 +696,7 @@ const progress = (cards.length / 12) * 100;
           flex-direction: column;
           gap: 8px;
         }
+        .right .cardInfo{display:none}
         .openingInsights{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px;padding-top:11px;border-top:1px solid #ece6ef}.openingInsights div{padding:8px;border-radius:9px;background:#f7f4f9}.openingInsights span,.openingInsights b{display:block}.openingInsights span{font-size:8px;color:#958b9c;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.openingInsights b{font-size:10px;color:#4e435b;margin-top:3px}
 
         .title {
@@ -714,7 +716,7 @@ const progress = (cards.length / 12) * 100;
         }
 
         .historyFull {
-          grid-column: span 2;
+          grid-column: 1 / -1;
           display: flex;
           gap: 6px;
           overflow-x: auto;
@@ -869,8 +871,8 @@ const progress = (cards.length / 12) * 100;
     padding: 0 12px 20px;
   }
 
-  .left { min-height: 245px; }
-  .stageStats{margin-top:15px;padding:11px}.stageStatsGrid{grid-template-columns:repeat(2,1fr);gap:6px}.stageStatsGrid article{padding:8px}.stageStatsGrid b{font-size:10px}
+  .left { min-height: 245px; max-width:270px; margin:auto; }
+  .stageStats{padding:17px}.stageStatsHead b{font-size:21px}.stageStatsGrid{grid-template-columns:repeat(2,1fr);gap:7px}.stageStatsGrid article{padding:9px}.stageStatsGrid b{font-size:11px}
   .right{padding:15px;border-radius:18px}.cardQueue{grid-template-columns:repeat(6,1fr)}.queueTitle{margin-bottom:4px}.awaiting h2{font-size:27px}
   .current img { max-width: 230px; }
   .historyFull { grid-column: span 1; }
