@@ -79,6 +79,20 @@ async function main() {
     }
   }
 
+  // Conserve un relevé quotidien uniquement pour les cartes présentes dans
+  // les collections : les courbes et alertes ne grossissent pas inutilement.
+  const day = new Date();
+  day.setHours(0, 0, 0, 0);
+  const owned = await prisma.collection.findMany({ where: { quantity: { gt: 0 } }, select: { cardId: true } });
+  const cardIds = [...new Set(owned.map((row) => row.cardId))];
+  const existing = await prisma.priceHistory.findMany({ where: { cardId: { in: cardIds }, recordedAt: day }, select: { cardId: true } });
+  const known = new Set(existing.map((row) => row.cardId));
+  const prices = await prisma.card.findMany({ where: { id: { in: cardIds.filter((id) => !known.has(id)) } }, select: { id: true, usd: true, usd_foil: true } });
+  if (prices.length) {
+    await prisma.priceHistory.createMany({ data: prices.map((card) => ({ cardId: card.id, normalEur: Number(((card.usd || 0) * .92).toFixed(2)), foilEur: Number(((card.usd_foil || card.usd || 0) * .92).toFixed(2)), recordedAt: day })) });
+  }
+  console.log(`📈 ${prices.length} relevés de prix enregistrés`);
+
   console.log("🎉 Prix terminés");
 }
 
