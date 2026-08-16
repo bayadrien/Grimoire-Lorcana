@@ -370,10 +370,13 @@ const progress = (cards.length / 12) * 100;
               )}
             </>
           )}
+          {!lastCard && <div className="awaiting"><span>✦</span><p>LE BOOSTER EST PRÊT</p><h2>Révèle la<br/><em>première carte.</em></h2><small>Scanne-la ou cherche-la manuellement à droite.</small></div>}
         </div>
 
         {/* RIGHT */}
         <div className="right">
+
+  <div className="actionTitle"><p>AJOUTER UN TIRAGE</p><h2>Carte {Math.min(cards.length + 1, 12)} <span>/ 12</span></h2><small>Le Grimoire l’ajoutera à cette ouverture après ta validation.</small></div>
 
   {/* BOOSTER + VALUE */}
   <div className="boosterBox">
@@ -568,9 +571,8 @@ const progress = (cards.length / 12) * 100;
 
         {/* HISTORY */}
         <div className="historyFull">
-          {cards.map((c, i) => (
-            <img key={i} src={c.imageUrl} />
-          ))}
+          <div className="queueTitle"><span>LE CONTENU DU BOOSTER</span><b>{cards.length} / 12 révélées</b></div>
+          <div className="cardQueue">{Array.from({ length: 12 }, (_, index) => { const card = cards[index]; return <div key={index} className={card ? "queueCard revealed" : "queueCard"}>{card ? <img src={card.imageUrl} alt={card.name_fr || card.name} /> : <span>{index + 1}</span>}{card?.foil && <i>✦</i>}</div>; })}</div>
         </div>
 
       </section>
@@ -601,13 +603,23 @@ const progress = (cards.length / 12) * 100;
           background:linear-gradient(145deg,#fff,#faf8fc);
           box-shadow:0 8px 22px rgba(48,36,75,.055);
           padding:20px;
+          position:relative;
+          overflow:hidden;
         }
+        .left:before{content:'';position:absolute;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(122,86,177,.18),transparent 67%);top:-115px;left:-95px}.awaiting{position:relative;z-index:1;text-align:center;padding:25px}.awaiting>span{display:grid;place-items:center;width:70px;height:70px;border-radius:50%;margin:0 auto 14px;background:linear-gradient(135deg,#f7d672,#d99733);color:#fff;font:31px Georgia;box-shadow:0 10px 24px rgba(184,130,38,.25)}.awaiting p,.actionTitle p{font-size:10px;font-weight:900;letter-spacing:.13em;color:#8d8398;margin:0}.awaiting h2{font-size:30px;letter-spacing:-.06em;line-height:.97;margin:9px 0}.awaiting h2 em{font-family:Georgia;font-weight:400;color:#73539d}.awaiting small{display:block;max-width:250px;color:#8a8290;font-size:11px;line-height:1.5}
 
         .right {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          padding:20px;
+          border:1px solid #e9e3ed;
+          border-radius:22px;
+          background:rgba(255,255,255,.9);
+          box-shadow:0 8px 22px rgba(48,36,75,.055);
+          align-self:start;
         }
+        .actionTitle{padding-bottom:5px}.actionTitle h2{font-size:25px;letter-spacing:-.055em;margin:5px 0}.actionTitle h2 span{font-size:14px;color:#9d94a4}.actionTitle small{color:#8c8392;font-size:10px;line-height:1.4}
 
         .current img {
           width: 100%;
@@ -622,6 +634,8 @@ const progress = (cards.length / 12) * 100;
   flex-direction: column;
   gap: 8px;
 }
+.searchBox { display:grid; grid-template-columns:1fr 1fr; }
+.searchBox .scanBtn,.searchBox .input{grid-column:span 2}.searchBox .input{width:100%;height:43px;padding:0 13px;border-radius:11px;background:#faf9fb;border:1px solid #e5dfe8}.searchBox .btn,.searchBox .undoBtn{height:42px;border:0;cursor:pointer;font-weight:800;font-size:11px}.searchBox .undoBtn{border:1px solid #e4dfe8;background:#f7f5f8;color:#746b7d}
 
 .scanBtn, .rescanBtn {
   padding: 10px;
@@ -826,6 +840,8 @@ const progress = (cards.length / 12) * 100;
   cursor: pointer;
   text-align: center;
 }
+.finish{min-height:49px;border:0;font-weight:900;font-size:13px;box-shadow:0 10px 20px rgba(73,52,118,.18)}
+.historyFull{flex-direction:column}.queueTitle{display:flex;justify-content:space-between;align-items:center;color:#837a8e}.queueTitle span{font-size:10px;font-weight:900;letter-spacing:.1em}.queueTitle b{font-size:11px;color:#593f83}.cardQueue{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}.queueCard{position:relative;min-width:0;aspect-ratio:.69;border:1px dashed #d8d0dd;border-radius:7px;background:#f7f4f8;display:grid;place-items:center;color:#b3a9b9;font-size:10px;font-weight:900;overflow:hidden}.queueCard.revealed{border:0;background:#ded7e4}.queueCard img{width:100%;height:100%;object-fit:cover}.queueCard i{position:absolute;right:2px;top:2px;width:14px;height:14px;display:grid;place-items:center;border-radius:50%;background:#f3cf5a;color:#59401a;font-size:9px;font-style:normal}
 
 @media (max-width: 640px) {
   .liveWrap { padding:15px 12px 20px; }
@@ -837,6 +853,7 @@ const progress = (cards.length / 12) * 100;
   }
 
   .left { min-height: 260px; }
+  .right{padding:15px;border-radius:18px}.cardQueue{grid-template-columns:repeat(6,1fr)}.queueTitle{margin-bottom:4px}.awaiting h2{font-size:27px}
   .current img { max-width: 230px; }
   .historyFull { grid-column: span 1; }
   .boosterBox img { width: 58px; }
