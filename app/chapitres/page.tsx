@@ -25,6 +25,9 @@ type ChapterStats = {
   aOwned: number;
   gOwned: number;
   duoOwned: number;
+  missing: number;
+  aDoubles: number;
+  gDoubles: number;
   pct: number;
 };
 
@@ -114,6 +117,9 @@ export default function ChapitresPage() {
           aOwned: 0,
           gOwned: 0,
           duoOwned: 0,
+          missing: 0,
+          aDoubles: 0,
+          gDoubles: 0,
           pct: 0,
         });
       }
@@ -121,21 +127,36 @@ export default function ChapitresPage() {
       const row = map.get(c.setCode)!;
       row.total += 1;
 
-      const aHas = (aCol[c.id] ?? 0) > 0;
-      const gHas = (gCol[c.id] ?? 0) > 0;
+      const aQty = aCol[c.id] ?? 0;
+      const gQty = gCol[c.id] ?? 0;
+      const aHas = aQty > 0;
+      const gHas = gQty > 0;
 
       if (aHas) row.aOwned += 1;
       if (gHas) row.gOwned += 1;
       if (aHas || gHas) row.duoOwned += 1;
+      if (aQty > 1) row.aDoubles += 1;
+      if (gQty > 1) row.gDoubles += 1;
     });
 
     return Array.from(map.values())
       .map((r) => ({
         ...r,
+        missing: r.total - r.duoOwned,
         pct: percent(r.duoOwned, r.total),
       }))
       .sort((a, b) => Number(a.code) - Number(b.code));
   }, [cards, aCol, gCol]);
+
+  const global = useMemo(() => chapters.reduce(
+    (total, chapter) => ({
+      cards: total.cards + chapter.total,
+      owned: total.owned + chapter.duoOwned,
+      missing: total.missing + chapter.missing,
+      doubles: total.doubles + chapter.aDoubles + chapter.gDoubles,
+    }),
+    { cards: 0, owned: 0, missing: 0, doubles: 0 }
+  ), [chapters]);
 
   /* ================= RENDER ================= */
 
@@ -143,9 +164,19 @@ export default function ChapitresPage() {
     <main className="shell">
             <AppHeader
               title="Grimoire Lorcana"
-              subtitle={`10 chapitres`}
+              subtitle={`${chapters.length} chapitres • ${global.owned} / ${global.cards} cartes réunies`}
               icon="📜"
             />
+
+      {!loading && (
+        <section className="globalStats" aria-label="Progression globale">
+          <div><strong>{global.owned}</strong><span>réunies</span></div>
+          <div><strong>{global.missing}</strong><span>manquantes</span></div>
+          <div><strong>{global.doubles}</strong><span>doublons</span></div>
+        </section>
+      )}
+
+      {loading && <p className="loading">Chargement de la progression…</p>}
 
       <section className="chaptersGrid">
         {chapters.map((ch) => (
@@ -174,9 +205,13 @@ export default function ChapitresPage() {
             </div>
 
             <div className="chapterFooter">
-              <span>Adrien : {ch.aOwned}</span>
-              <span>Angèle : {ch.gOwned}</span>
-              <span>Total : {ch.total}</span>
+              <span>✅ {ch.duoOwned} / {ch.total}</span>
+              <span>⬜ {ch.missing} manquante{ch.missing > 1 ? "s" : ""}</span>
+            </div>
+
+            <div className="chapterSubFooter">
+              <span>Adrien : {ch.aOwned} · 🎁 {ch.aDoubles}</span>
+              <span>Angèle : {ch.gOwned} · 🎁 {ch.gDoubles}</span>
             </div>
           </a>
         ))}
@@ -190,6 +225,27 @@ export default function ChapitresPage() {
           grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
           gap: 16px;
         }
+
+        .globalStats {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin: 16px 0 4px;
+        }
+
+        .globalStats div {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 12px 8px;
+          border-radius: 16px;
+          background: white;
+          box-shadow: 0 6px 20px rgba(0,0,0,.08);
+        }
+
+        .globalStats strong { font-size: 22px; color: #243b64; }
+        .globalStats span { font-size: 12px; opacity: .65; }
+        .loading { text-align: center; opacity: .7; }
 
         .chapterCard {
           position: relative;
@@ -276,6 +332,15 @@ export default function ChapitresPage() {
           opacity: 0.9;
         }
 
+        .chapterSubFooter {
+          margin-top: 8px;
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          font-size: 12px;
+          opacity: .82;
+        }
+
         /* Couleurs par progression */
         .pct-0 .progressFill,
         .pct-1 .progressFill,
@@ -295,6 +360,11 @@ export default function ChapitresPage() {
         .pct-9 .progressFill,
         .pct-10 .progressFill {
           background: linear-gradient(90deg, #2ecc71, #27ae60);
+        }
+
+        @media (max-width: 520px) {
+          .chaptersGrid { grid-template-columns: 1fr; }
+          .chapterFooter, .chapterSubFooter { flex-wrap: wrap; }
         }
       `}</style>
     </main>
