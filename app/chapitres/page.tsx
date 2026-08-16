@@ -183,35 +183,41 @@ export default function ChapitresPage() {
           <a
             key={ch.code}
             href={`/chapitres/${ch.code}`}
-            className="chapterCard"
+            className={`chapterCard pct-${Math.min(10, Math.floor(ch.pct / 10))}`}
             style={{
               backgroundImage: `url(${CHAPTER_BACKGROUNDS[ch.code]})`,
             }}
           >
-            <div className="chapterHeader">
+            <div className="chapterTop">
               <div>
-                <div className="chapterCode">Chapitre {ch.code}</div>
+                <div className="chapterCode">CHAPITRE {ch.code}</div>
                 <div className="chapterName">{ch.name}</div>
               </div>
 
               <div className="chapterPct">{ch.pct}%</div>
             </div>
 
-            <div className="progressBar">
+            <div className="chapterBottom">
+            <div className="chapterProgressBar">
               <div
-                className="progressFill"
+                className="chapterProgressFill"
                 style={{ width: `${ch.pct}%` }}
               />
             </div>
 
-            <div className="chapterFooter">
-              <span>✅ {ch.duoOwned} / {ch.total}</span>
-              <span>⬜ {ch.missing} manquante{ch.missing > 1 ? "s" : ""}</span>
+            <div className="chapterMetrics">
+              <div>
+                <strong>{ch.duoOwned} <small>/ {ch.total}</small></strong>
+                <span>cartes réunies</span>
+              </div>
+              <div>
+                <strong>{ch.missing}</strong>
+                <span>manquantes</span>
+              </div>
+              {(ch.aDoubles + ch.gDoubles) > 0 && (
+                <div className="chapterDoubles">🎁 {ch.aDoubles + ch.gDoubles}</div>
+              )}
             </div>
-
-            <div className="chapterSubFooter">
-              <span>Adrien : {ch.aOwned} · 🎁 {ch.aDoubles}</span>
-              <span>Angèle : {ch.gOwned} · 🎁 {ch.gDoubles}</span>
             </div>
           </a>
         ))}
@@ -227,13 +233,14 @@ export default function ChapitresPage() {
         }
 
         .globalStats {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          display: flex;
+          justify-content: center;
           gap: 10px;
           margin: 16px 0 4px;
         }
 
         .globalStats div {
+          width: 180px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -250,7 +257,11 @@ export default function ChapitresPage() {
         .chapterCard {
           position: relative;
           overflow: hidden;
+          min-height: 208px;
           padding: 18px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
           border-radius: 22px;
           background-size: cover;
           background-position: center;
@@ -266,9 +277,9 @@ export default function ChapitresPage() {
           position: absolute;
           inset: 0;
           background: linear-gradient(
-            to bottom,
-            rgba(0,0,0,.35),
-            rgba(0,0,0,.8)
+            135deg,
+            rgba(11, 19, 37, .30),
+            rgba(11, 19, 37, .88)
           );
           z-index: 0;
         }
@@ -281,90 +292,109 @@ export default function ChapitresPage() {
 
 
         .chapterCard:hover {
-          transform: translateY(-6px) scale(1.02);
+          transform: translateY(-4px);
           box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
         }
 
-        .chapterHeader {
+        .chapterTop {
           display: flex;
           justify-content: space-between;
           gap: 12px;
+          align-items: flex-start;
         }
 
         .chapterCode {
           font-weight: 900;
-          font-size: 18px;
+          font-size: 12px;
+          letter-spacing: .08em;
+          opacity: .8;
         }
 
         .chapterName {
-          opacity: 0.85;
+          max-width: 210px;
           margin-top: 4px;
+          font-weight: 800;
+          font-size: 20px;
+          line-height: 1.12;
         }
 
         .chapterPct {
           font-weight: 900;
-          padding: 8px 14px;
+          font-size: 17px;
+          padding: 10px 9px;
+          min-width: 52px;
+          text-align: center;
           border-radius: 999px;
-          background: rgba(0, 0, 0, 0.35);
-          border: 1px solid rgba(255, 255, 255, 0.25);
+          background: rgba(255, 255, 255, 0.18);
+          border: 1px solid rgba(255, 255, 255, 0.38);
+          backdrop-filter: blur(8px);
         }
 
-        .progressBar {
-          margin-top: 14px;
-          height: 12px;
+        .chapterProgressBar {
+          height: 7px;
           background: rgba(255, 255, 255, 0.15);
           border-radius: 999px;
           overflow: hidden;
         }
 
-        .progressFill {
+        .chapterProgressFill {
           height: 100%;
           border-radius: 999px;
           transition: width 0.4s ease;
           background: linear-gradient(90deg, #2ecc71, #27ae60);
         }
 
-        .chapterFooter {
-          margin-top: 14px;
+        .chapterBottom { display: flex; flex-direction: column; gap: 12px; }
+
+        .chapterMetrics {
           display: flex;
-          justify-content: space-between;
-          font-size: 13px;
-          opacity: 0.9;
+          align-items: flex-end;
+          gap: 18px;
         }
 
-        .chapterSubFooter {
-          margin-top: 8px;
+        .chapterMetrics > div:not(.chapterDoubles) {
           display: flex;
-          justify-content: space-between;
-          gap: 8px;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .chapterMetrics strong { font-size: 19px; line-height: 1; }
+        .chapterMetrics small { font-size: 13px; opacity: .75; }
+        .chapterMetrics span { font-size: 11px; opacity: .78; }
+        .chapterDoubles {
+          margin-left: auto;
+          padding: 6px 9px;
+          border-radius: 999px;
           font-size: 12px;
-          opacity: .82;
+          background: rgba(255, 195, 74, .2);
+          border: 1px solid rgba(255, 220, 138, .38);
         }
 
         /* Couleurs par progression */
-        .pct-0 .progressFill,
-        .pct-1 .progressFill,
-        .pct-2 .progressFill {
+        .pct-0 .chapterProgressFill,
+        .pct-1 .chapterProgressFill,
+        .pct-2 .chapterProgressFill {
           background: linear-gradient(90deg, #ff6b6b, #c0392b);
         }
 
-        .pct-3 .progressFill,
-        .pct-4 .progressFill,
-        .pct-5 .progressFill,
-        .pct-6 .progressFill {
+        .pct-3 .chapterProgressFill,
+        .pct-4 .chapterProgressFill,
+        .pct-5 .chapterProgressFill,
+        .pct-6 .chapterProgressFill {
           background: linear-gradient(90deg, #f6b93b, #e67e22);
         }
 
-        .pct-7 .progressFill,
-        .pct-8 .progressFill,
-        .pct-9 .progressFill,
-        .pct-10 .progressFill {
+        .pct-7 .chapterProgressFill,
+        .pct-8 .chapterProgressFill,
+        .pct-9 .chapterProgressFill,
+        .pct-10 .chapterProgressFill {
           background: linear-gradient(90deg, #2ecc71, #27ae60);
         }
 
         @media (max-width: 520px) {
           .chaptersGrid { grid-template-columns: 1fr; }
-          .chapterFooter, .chapterSubFooter { flex-wrap: wrap; }
+          .globalStats { gap: 6px; }
+          .globalStats div { width: auto; flex: 1; }
         }
       `}</style>
     </main>
