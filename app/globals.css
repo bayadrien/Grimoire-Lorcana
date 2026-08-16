@@ -1388,3 +1388,33 @@ input.pill{
   filter: drop-shadow(0 2px 4px rgba(0,0,0,.6));
 }
 
+/* ===== IDENTITÉ GLOBALE — GRIMOIRE ===== */
+:root{
+  --bg:#f7f1e5;
+  --bg2:#eee5d3;
+  --ink:#2b2140;
+  --muted:#776b83;
+  --gold:#d19a36;
+  --gold2:#ffe29a;
+  --card:#fffdf9;
+  --border:rgba(67,45,98,.12);
+  --shadow:0 18px 48px rgba(53,35,79,.13);
+  --shadow2:0 10px 26px rgba(53,35,79,.10);
+  --radius:22px;
+}
+
+html{background:#f7f1e5;}
+body{
+  min-width:320px;
+  color:var(--ink);
+  background:
+    radial-gradient(900px 560px at -10% 0%, rgba(255,216,126,.48), transparent 68%),
+    radial-gradient(830px 620px at 105% 17%, rgba(184,153,225,.22), transparent 65%),
+    radial-gradient(760px 500px at 50% 100%, rgba(245,204,121,.18), transparent 72%),
+    linear-gradient(145deg,#fbf7ef 0%,#f4eddf 50%,#f7f4ee 100%);
+  background-attachment:fixed;
+}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.34;background-image:radial-gradient(rgba(92,61,128,.12) .55px,transparent .6px);background-size:9px 9px;mask-image:linear-gradient(180deg,black,transparent 72%)}
+::selection{background:#ead18d;color:#30213f}
+button,input,select,textarea{font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(193,144,52,.45);outline-offset:3px}

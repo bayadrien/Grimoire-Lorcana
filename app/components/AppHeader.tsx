@@ -49,18 +49,18 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="nav">
+      <header className="appNav">
         {/* LEFT */}
-        <div className="left">
-          <div className="logo">✨</div>
-          <div className="brandText">
-            <div className="title">Grimoire</div>
-            <div className="subtitle">Lorcana</div>
+        <div className="appNavBrand">
+          <div className="appNavLogo">✦</div>
+          <div className="appNavBrandText">
+            <div className="appNavTitle">Grimoire</div>
+            <div className="appNavSubtitle">Lorcana</div>
           </div>
         </div>
 
         {/* CENTER */}
-        <div className="center">
+        <nav className="appNavLinks" aria-label="Navigation principale">
           {navItems.map((item) => {
             const isActive =
               item.href === "/"
@@ -71,14 +71,14 @@ export default function AppHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`link ${isActive ? "active" : ""}`}
+                className={`appNavLink ${isActive ? "active" : ""}`}
               >
                 <span>{item.icon}</span>
                 {item.label}
               </Link>
             );
           })}
-        </div>
+        </nav>
 
         <div className="globalSearch">
           <span>⌕</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Rechercher une carte…" />
@@ -86,7 +86,7 @@ export default function AppHeader() {
         </div>
 
         {/* RIGHT */}
-        <div className="right">
+        <div className="appNavActions">
           <select
             value={activeUser}
             onChange={(e) =>
@@ -97,7 +97,7 @@ export default function AppHeader() {
             <option value="angele">Angèle</option>
           </select>
 
-          <button className="burger" onClick={() => setMenuOpen(true)}>
+          <button className="appNavBurger" aria-label="Ouvrir le menu" onClick={() => setMenuOpen(true)}>
             ☰
           </button>
         </div>
@@ -105,9 +105,9 @@ export default function AppHeader() {
 
       {/* MOBILE */}
       {menuOpen && (
-        <div className="overlay" onClick={() => setMenuOpen(false)}>
-          <div className="menu" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setMenuOpen(false)}>✕</button>
+        <div className="appNavOverlay" onClick={() => setMenuOpen(false)}>
+          <div className="appNavMenu" onClick={(e) => e.stopPropagation()}>
+            <button className="appNavMenuClose" aria-label="Fermer le menu" onClick={() => setMenuOpen(false)}>✕</button>
 
             {navItems.map((item) => (
               <Link
@@ -125,170 +125,15 @@ export default function AppHeader() {
       {preview && <div className="quickOverlay" onClick={() => setPreview(null)}><article className="quickCard" onClick={(event) => event.stopPropagation()}><button className="closeQuick" onClick={() => setPreview(null)}>×</button><img src={preview.imageUrl || ""} alt={preview.name_fr || preview.name || "Carte Lorcana"}/><div><p>FICHE RAPIDE · CHAPITRE {preview.setCode || "—"}</p><h2>{preview.name_fr || preview.name}</h2><span>{preview.ink || "—"} · {preview.rarity || "—"}</span><strong>{preview.quantity ? `✓ ${preview.quantity} exemplaire${preview.quantity > 1 ? "s" : ""}` : "◇ Carte manquante"}</strong><Link href={`/cartes/${preview.id}`}>Voir la fiche complète →</Link></div></article></div>}
 
       <style jsx global>{`
-        /* NAVBAR */
-        .nav {
-          position: sticky;
-          top: 0;
-          z-index: 1000;
-
-          width: 100%;
-          height: 64px;
-
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-
-          padding: 0 20px;
-
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(12px);
-
-          border-bottom-left-radius: 18px;
-          border-bottom-right-radius: 18px;
-
-          box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-        }
-
-        /* LEFT */
-        .left {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .logo {
-          width: 36px;
-          height: 36px;
-          border-radius: 12px;
-
-          display: flex;
-          align-items: center;
-          justify-content: center;
-
-          background: linear-gradient(135deg, #ffd700, #ffb800);
-          color: white;
-          font-size: 18px;
-
-          box-shadow: 0 6px 14px rgba(255,184,0,0.3);
-        }
-
-        .brandText .title {
-          font-weight: 600;
-          font-size: 15px;
-
-          background: linear-gradient(90deg, #ffd700, #ffb800);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        .brandText .subtitle {
-          font-size: 12px;
-          color: #777;
-        }
-
-        /* CENTER NAV */
-        .center {
-          display: flex;
-          gap: 4px;
-
-          background: rgba(0,0,0,0.04);
-          padding: 4px;
-          border-radius: 999px;
-        }
-
-        .link {
-          padding: 8px 14px;
-          border-radius: 999px;
-
-          display: flex;
-          align-items: center;
-          gap: 6px;
-
-          font-size: 14px;
-          font-weight: 500;
-          color: #444;
-
-          transition: all 0.2s ease;
-        }
-
-        .link:hover {
-          background: rgba(0,0,0,0.06);
-          color: black;
-        }
-
-        .link.active {
-          background: linear-gradient(90deg, #ffd700, #ffb800);
-          color: black;
-
-          box-shadow: 0 4px 10px rgba(255,184,0,0.25);
-        }
-
-        /* RIGHT */
-        .right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .globalSearch { position:relative; display:flex; align-items:center; gap:5px; width:200px; padding:0 9px; border:1px solid #e6e1e8; border-radius:999px; background:#faf9fb; color:#796e88; }
-        .globalSearch input { width:100%; min-width:0; height:33px; border:0; outline:0; background:transparent; padding:0; font:inherit; font-size:11px; }
-        .searchResults { position:absolute; top:42px; right:0; width:330px; max-height:430px; overflow:auto; border:1px solid #e5e0e8; border-radius:14px; background:#fff; padding:6px; box-shadow:0 18px 42px rgba(35,24,57,.18); z-index:1002; }
-        .searchResults button { width:100%; display:flex; align-items:center; gap:9px; padding:6px; border:0; border-radius:9px; background:transparent; text-align:left; cursor:pointer; color:#302a39; }
-        .searchResults button:hover { background:#f5f2f8; }.searchResults img { width:31px; height:44px; object-fit:cover; border-radius:5px; background:#eee9f0; }.searchResults b,.searchResults small { display:block; }.searchResults b{font-size:11px}.searchResults small{margin-top:3px;font-size:9px;color:#8e8595}
-        .quickOverlay { position:fixed; inset:0; z-index:2000; display:grid; place-items:center; padding:18px; background:rgba(21,14,35,.5); backdrop-filter:blur(5px); }.quickCard { position:relative; display:grid; grid-template-columns:160px minmax(0,1fr); gap:19px; width:min(510px,100%); padding:18px; border-radius:20px; background:linear-gradient(145deg,#fff,#f4eff9); box-shadow:0 25px 60px rgba(12,8,21,.35); }.quickCard>img{width:160px;border-radius:11px;box-shadow:0 12px 23px rgba(43,30,70,.23)}.quickCard p{font-size:9px;font-weight:900;letter-spacing:.1em;color:#8c809a;margin:8px 0}.quickCard h2{margin:0;font-size:25px;letter-spacing:-.05em}.quickCard span,.quickCard strong,.quickCard a{display:block;margin-top:9px;font-size:11px}.quickCard span{color:#857c90}.quickCard strong{color:#4c8762}.quickCard a{color:#694a9b;font-weight:900;text-decoration:none}.closeQuick{position:absolute;right:10px;top:8px;border:0;background:#eee8f4;border-radius:50%;width:27px;height:27px;font-size:20px;cursor:pointer;color:#4c4160}
-
-        .right select {
-          border: none;
-          padding: 6px 12px;
-          border-radius: 999px;
-          background: #f3f3f3;
-          cursor: pointer;
-        }
-
-        /* BURGER */
-        .burger {
-          display: none;
-          background: none;
-          border: none;
-          font-size: 20px;
-        }
-
-        /* MOBILE */
-        @media (max-width: 768px) {
-          .center {
-            display: none;
-          }
-          .globalSearch { margin-left:auto; width:min(210px,42vw); }
-
-          .burger {
-            display: block;
-          }
-        }
-
-        .overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.4);
-        }
-
-        .menu {
-          position: absolute;
-          right: 0;
-          top: 0;
-          width: 260px;
-          height: 100%;
-
-          background: white;
-          padding: 20px;
-
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-        }
-
-        .menu a {
-          font-size: 16px;
-        }
+        .appNav{position:sticky;top:12px;z-index:1000;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:18px;width:min(1280px,calc(100% - 28px));min-height:68px;margin:12px auto 0;padding:8px 10px 8px 12px;border:1px solid rgba(255,255,255,.65);border-radius:22px;background:rgba(20,14,39,.82);box-shadow:0 16px 42px rgba(37,25,66,.22),inset 0 1px 0 rgba(255,255,255,.14);backdrop-filter:blur(18px);color:#fff}
+        .appNavBrand{display:flex;align-items:center;gap:10px;padding:0 4px}.appNavLogo{width:40px;height:40px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(135deg,#ffe496,#e9a934);color:#3f2610;font-size:21px;box-shadow:0 8px 18px rgba(231,174,50,.3)}.appNavBrandText{line-height:1}.appNavTitle{font-family:Georgia,serif;font-weight:700;font-size:19px;letter-spacing:-.045em;color:#fff7db}.appNavSubtitle{margin-top:5px;font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#c4b9df}
+        .appNavLinks{display:flex;justify-content:center;gap:2px;min-width:0;padding:4px;border-radius:15px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.09)}.appNavLink{display:inline-flex;align-items:center;gap:6px;padding:9px 11px;border-radius:11px;color:#dfd8ec;text-decoration:none;white-space:nowrap;font-size:12px;font-weight:800;transition:background .18s ease,color .18s ease,transform .18s ease}.appNavLink:hover{color:#fff;background:rgba(255,255,255,.1);transform:translateY(-1px)}.appNavLink.active{color:#30213f;background:linear-gradient(135deg,#ffe384,#eeb449);box-shadow:0 6px 15px rgba(0,0,0,.2)}
+        .globalSearch{position:relative;display:flex;align-items:center;gap:6px;width:205px;padding:0 11px;border:1px solid rgba(255,255,255,.16);border-radius:13px;background:rgba(255,255,255,.09);color:#e9dff7}.globalSearch input{width:100%;min-width:0;height:34px;border:0;outline:0;background:transparent;padding:0;color:#fff;font:inherit;font-size:11px}.globalSearch input::placeholder{color:#c7bbd6}.searchResults{position:absolute;top:45px;right:0;width:340px;max-height:430px;overflow:auto;border:1px solid rgba(88,62,127,.15);border-radius:16px;background:#fffcf8;padding:7px;box-shadow:0 20px 48px rgba(26,17,47,.28);z-index:1002}.searchResults button{width:100%;display:flex;align-items:center;gap:10px;padding:7px;border:0;border-radius:11px;background:transparent;text-align:left;cursor:pointer;color:#302641}.searchResults button:hover{background:#f3edf8}.searchResults img{width:31px;height:44px;object-fit:cover;border-radius:5px;background:#eee9f0}.searchResults b,.searchResults small{display:block}.searchResults b{font-size:11px}.searchResults small{margin-top:3px;font-size:9px;color:#847994}
+        .appNavActions{display:flex;align-items:center;gap:8px}.appNavActions select{height:36px;border:1px solid rgba(255,255,255,.15);padding:0 25px 0 11px;border-radius:12px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;font:700 12px inherit}.appNavActions option{color:#302641}.appNavBurger{display:none;width:38px;height:36px;border:1px solid rgba(255,255,255,.16);border-radius:12px;background:rgba(255,255,255,.1);color:white;font-size:18px;cursor:pointer}
+        .appNavOverlay{position:fixed;inset:0;z-index:1200;background:rgba(15,8,28,.52);backdrop-filter:blur(5px)}.appNavMenu{position:absolute;right:12px;top:12px;width:min(320px,calc(100% - 24px));padding:18px;border:1px solid rgba(255,255,255,.25);border-radius:22px;background:linear-gradient(150deg,#302151,#1b132f);box-shadow:0 22px 60px rgba(14,8,26,.35);display:flex;flex-direction:column;gap:5px}.appNavMenu a{padding:12px;border-radius:12px;color:#f9f4ff;text-decoration:none;font-weight:800}.appNavMenu a:hover{background:rgba(255,255,255,.1)}.appNavMenuClose{align-self:flex-end;width:31px;height:31px;border:0;border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer}
+        .quickOverlay{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:18px;background:rgba(18,10,32,.62);backdrop-filter:blur(6px)}.quickCard{position:relative;display:grid;grid-template-columns:160px minmax(0,1fr);gap:19px;width:min(510px,100%);padding:18px;border:1px solid rgba(255,255,255,.7);border-radius:22px;background:linear-gradient(145deg,#fffdf9,#f1ebf8);box-shadow:0 25px 60px rgba(12,8,21,.35)}.quickCard>img{width:160px;border-radius:11px;box-shadow:0 12px 23px rgba(43,30,70,.23)}.quickCard p{font-size:9px;font-weight:900;letter-spacing:.1em;color:#8c809a;margin:8px 0}.quickCard h2{margin:0;font-size:25px;letter-spacing:-.05em}.quickCard span,.quickCard strong,.quickCard a{display:block;margin-top:9px;font-size:11px}.quickCard span{color:#857c90}.quickCard strong{color:#4c8762}.quickCard a{color:#694a9b;font-weight:900;text-decoration:none}.closeQuick{position:absolute;right:10px;top:8px;border:0;background:#eee8f4;border-radius:50%;width:27px;height:27px;font-size:20px;cursor:pointer;color:#4c4160}
+        @media(max-width:1120px){.appNav{grid-template-columns:auto 1fr auto}.appNavLinks{display:none}.appNavBurger{display:grid;place-items:center}.globalSearch{justify-self:end;width:min(250px,40vw)}}
+        @media(max-width:640px){.appNav{top:7px;width:calc(100% - 14px);min-height:58px;margin-top:7px;padding:7px 8px}.appNavLogo{width:35px;height:35px;border-radius:11px;font-size:18px}.appNavTitle{font-size:17px}.appNavSubtitle{display:none}.globalSearch{width:min(180px,40vw);border-radius:11px}.appNavActions select{display:none}.appNavBurger{width:35px;height:35px}.searchResults{position:fixed;top:72px;left:7px;right:7px;width:auto}.quickCard{grid-template-columns:112px minmax(0,1fr);gap:13px;padding:14px}.quickCard>img{width:112px}.quickCard h2{font-size:20px}}
       `}</style>
     </>
   );
