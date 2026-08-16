@@ -47,7 +47,7 @@ export default function EchangePage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
-  const [suggestion, setSuggestion] = useState<{ other:string; gives:Card[]; receives:Card[]; possible:number } | null>(null);
+  const [suggestion, setSuggestion] = useState<{ other:string; gives:Card[]; receives:Card[]; possible:number; matches?:Array<{give:Card;receive:Card;giveValue:number;receiveValue:number;difference:number}> } | null>(null);
 
   // ✅ 2A: Toggle Grille/Liste + mémorisation
   const [view, setView] = useState<"grid" | "list">("grid");
@@ -176,11 +176,7 @@ export default function EchangePage() {
 
   return (
     <main className="shell">
-      <AppHeader
-        title="Mode Echange"
-        subtitle="Qui Donne Quoi"
-        icon="📜"
-      />
+      <AppHeader />
 
       <div className="topbar" style={{ marginTop: 12, justifyContent: "space-between" }}>
         <div className="controls" style={{ gap: 10, flexWrap: "wrap" }}>
@@ -242,7 +238,7 @@ export default function EchangePage() {
         </div>
       )}
 
-      {suggestion && suggestion.possible > 0 && <section className="swapSuggestion"><div><p>ÉCHANGE SUGGÉRÉ</p><h2>Un échange équilibré est possible avec {suggestion.other === "angele" ? "Angèle" : "Adrien"}</h2><span>Tu donnes un doublon contre une carte qui te manque.</span></div><div className="swapCards"><div>{suggestion.gives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div><b>⇄</b><div>{suggestion.receives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div></div></section>}
+      {suggestion && suggestion.possible > 0 && <section className="swapSuggestion"><div><p>ÉCHANGE SUGGÉRÉ</p><h2>Un échange équilibré est possible avec {suggestion.other === "angele" ? "Angèle" : "Adrien"}</h2><span>{suggestion.matches?.[0] ? `Écart estimé : ${suggestion.matches[0].difference.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}.` : "Tu donnes un doublon contre une carte qui te manque."}</span></div><div className="swapCards">{suggestion.matches?.[0] ? <><div><img src={suggestion.matches[0].give.imageUrl || ""} alt={suggestion.matches[0].give.name}/><small>Tu donnes · {suggestion.matches[0].giveValue.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}</small></div><b>⇄</b><div><img src={suggestion.matches[0].receive.imageUrl || ""} alt={suggestion.matches[0].receive.name}/><small>Tu reçois · {suggestion.matches[0].receiveValue.toLocaleString("fr-FR", { style:"currency", currency:"EUR" })}</small></div></> : <><div>{suggestion.gives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div><b>⇄</b><div>{suggestion.receives.slice(0, 2).map(card => <img key={card.id} src={card.imageUrl || ""} alt={card.name}/>)}</div></>}</div></section>}
 
       {/* Adrien -> Angèle */}
       <section
