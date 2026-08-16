@@ -62,12 +62,16 @@ export async function POST(req: Request) {
     if (!/\/decks\/[A-Za-z0-9]+/.test(url.pathname)) {
       return NextResponse.json({ error: "Ce lien Dreamborn ne correspond pas à un deck public." }, { status: 400 });
     }
-    const response = await fetch(url.toString(), {
-      headers: { "User-Agent": "Grimoire-Lorcana deck importer" },
-      cache: "no-store",
-    });
-    if (!response.ok) return NextResponse.json({ error: "Dreamborn n’a pas retourné ce deck." }, { status: 422 });
-    const html = await response.text();
+    let html = typeof body.html === "string" ? body.html : "";
+    if (!html) {
+      const response = await fetch(url.toString(), {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; Grimoire-Lorcana)" },
+        cache: "no-store",
+      });
+      if (!response.ok) return NextResponse.json({ error: "Dreamborn n’a pas retourné ce deck." }, { status: 422 });
+      html = await response.text();
+    }
+    if (html.length > 2_000_000) return NextResponse.json({ error: "La page Dreamborn est trop volumineuse." }, { status: 422 });
     const entries = parseDreambornCode(html);
     if (!entries.length) return NextResponse.json({ error: "Impossible de lire la liste de cartes de ce deck Dreamborn." }, { status: 422 });
 
