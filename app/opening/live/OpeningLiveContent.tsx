@@ -390,6 +390,7 @@ const progress = (cards.length / 12) * 100;
                   ✨ {lastCard?.foil ? "Foil activée" : "Mettre en foil"}
                 </button>
               )}
+              <section className="stageStats"><div className="stageStatsHead"><span>FICHE DU TIRAGE</span><b>{lastCard.name_fr || lastCard.name}</b></div><div className="stageStatsGrid"><article><span>Valeur normale</span><b>💰 {toEuro(lastCard.usd)}</b></article><article><span>Valeur foil</span><b>✨ {toEuro(lastCard.usd_foil)}</b></article><article><span>Dans la collection</span><b>{lastCard.quantity || 0} exemplaire{(lastCard.quantity || 0) > 1 ? "s" : ""}</b></article><article><span>Déjà tirée</span><b>{lastCardHistory?.count || 0} fois</b></article><article><span>Dernière apparition</span><b>{lastCardHistory?.last ? new Date(lastCardHistory.last).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "Aujourd’hui"}</b></article><article><span>Pour l’échange</span><b>{lastCard.forOtherUser ? "Utile 🎁" : "À garder"}</b></article></div></section>
             </>
           )}
           {!lastCard && <div className="awaiting"><span>✦</span><p>LE BOOSTER EST PRÊT</p><h2>Révèle la<br/><em>première carte.</em></h2><small>Scanne-la ou cherche-la manuellement à droite.</small></div>}
@@ -631,6 +632,7 @@ const progress = (cards.length / 12) * 100;
           border-radius: 15px;
           box-shadow:0 20px 30px rgba(31,21,53,.2);
         }
+        .stageStats{position:relative;z-index:1;width:min(100%,620px);margin-top:20px;padding:15px;border:1px solid #e9e2ef;border-radius:17px;background:rgba(255,255,255,.88);box-shadow:0 8px 18px rgba(45,33,70,.06)}.stageStatsHead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:11px}.stageStatsHead span{font-size:9px;font-weight:900;letter-spacing:.11em;color:#8d8398}.stageStatsHead b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stageStatsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stageStatsGrid article{padding:10px;border-radius:10px;background:linear-gradient(135deg,#faf7fc,#f3edf8)}.stageStatsGrid span,.stageStatsGrid b{display:block}.stageStatsGrid span{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:#978da0}.stageStatsGrid b{margin-top:4px;font-size:12px;color:#443653;line-height:1.2}
 
 .searchBox {
   position: relative;
@@ -868,6 +870,7 @@ const progress = (cards.length / 12) * 100;
   }
 
   .left { min-height: 245px; }
+  .stageStats{margin-top:15px;padding:11px}.stageStatsGrid{grid-template-columns:repeat(2,1fr);gap:6px}.stageStatsGrid article{padding:8px}.stageStatsGrid b{font-size:10px}
   .right{padding:15px;border-radius:18px}.cardQueue{grid-template-columns:repeat(6,1fr)}.queueTitle{margin-bottom:4px}.awaiting h2{font-size:27px}
   .current img { max-width: 230px; }
   .historyFull { grid-column: span 1; }
