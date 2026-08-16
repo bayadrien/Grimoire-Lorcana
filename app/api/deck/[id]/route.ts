@@ -27,7 +27,6 @@ export async function GET(
               collections: {
                 where: {
                   userId,
-                  variant: "normal",
                 },
               },
             },
