@@ -379,6 +379,12 @@ console.log("CARD SAMPLE =", cards[0]);
               >
                 <div className="cardMedia">
                   <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
+                  <a
+                    className="cardDetailLink"
+                    href={`/cartes/${c.id}`}
+                    aria-label={`Ouvrir la fiche de ${c.name}`}
+                    title={`Fiche de ${c.name}`}
+                  />
 
                   <div className="qtyPill unified">
                     <button onClick={() => setQty(c.id, variant, current - 1)}>
@@ -574,6 +580,7 @@ console.log("CARD SAMPLE =", cards[0]);
           z-index: 20;
           box-shadow: 0 22px 45px rgba(22,31,48,.34);
         }
+        .cardDetailLink { position: absolute; inset: 0; z-index: 3; }
 
         .loadMore { display: flex; justify-content: center; margin: 22px 0 8px; }
         .loadMore button { padding: 11px 18px; background: #243b64; color: white; border-color: #243b64; }
