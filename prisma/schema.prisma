@@ -51,6 +51,17 @@ model PriceHistory {
   @@index([cardId, recordedAt])
 }
 
+model PuzzlePiece {
+  userId     String
+  puzzleId   String
+  piece      Int
+  obtainedAt DateTime @default(now())
+
+  @@id([userId, puzzleId, piece])
+  @@index([userId, puzzleId])
+  @@map("PuzzlePiece")
+}
+
 model Collection {
   userId   String
   cardId   String
