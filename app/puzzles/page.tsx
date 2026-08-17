@@ -15,6 +15,8 @@ const puzzles: Puzzle[] = [
   { id: "jafar-1", ch: 8, t: "Jafar I", img: "/puzzles/jafar-1-3x3.png", n: 9, c: 3, portrait: true },
   { id: "jafar-2", ch: 8, t: "Jafar II", img: "/puzzles/jafar-2-3x3.png", n: 9, c: 3, portrait: true },
   { id: "fabuleux", ch: 9, t: "Fabuleux", img: "/puzzles/fabuleux-3x3.png", n: 9, c: 3, portrait: true },
+  { id: "profondeurs-1", ch: 10, t: "Lueurs dans les Profondeurs I", img: "/puzzles/profondeurs-1-3x3.png", n: 9, c: 3, portrait: true },
+  { id: "profondeurs-2", ch: 10, t: "Lueurs dans les Profondeurs II", img: "/puzzles/profondeurs-2-3x3.png", n: 9, c: 3, portrait: true },
   { id: "givresort", ch: 11, t: "Givresort I", img: "/puzzles/givresort-3x3.png", n: 9, c: 3 },
   { id: "givresort-2", ch: 11, t: "Givresort II", img: "/puzzles/givresort-2-3x3.png", n: 9, c: 3 },
   { id: "contrees-inconnues", ch: 12, t: "Contrées inconnues", img: "/puzzles/contrees-inconnues-3x3.png", n: 9, c: 3, portrait: true },
