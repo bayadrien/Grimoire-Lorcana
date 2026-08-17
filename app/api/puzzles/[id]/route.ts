@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const PUZZLES = new Set(["givresort", "mer-azurite", "archazia-1", "archazia-2", "jafar-1", "jafar-2", "fabuleux", "contrees-inconnues", "invasion-epineuse"]);
+const PUZZLES = new Set(["retour-ursula", "givresort", "mer-azurite", "archazia-1", "archazia-2", "jafar-1", "jafar-2", "fabuleux", "contrees-inconnues", "invasion-epineuse"]);
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
