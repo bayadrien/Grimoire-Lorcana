@@ -19,65 +19,83 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
+const WRITE_CONCURRENCY = 12;
+const FETCH_CONCURRENCY = 3;
+
+type LorcastCard = {
+  id: string;
+  prices?: { usd?: string | number | null; usd_foil?: string | number | null };
+};
+
+type LorcastSet = { code: string };
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>
+) {
+  const results: R[] = [];
+  let cursor = 0;
+
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (true) {
+      const index = cursor++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index]);
+    }
+  });
+
+  await Promise.all(runners);
+  return results;
+}
+
+async function fetchJson(url: string) {
+  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) throw new Error(`${url} a répondu ${response.status}`);
+  return response.json();
 }
 
 async function main() {
   console.log("💰 Sync des prix...");
 
-  const setsRes = await fetch("https://api.lorcast.com/v0/sets");
-  const setsJson = await setsRes.json();
+  const setsJson = await fetchJson("https://api.lorcast.com/v0/sets");
 
-  const sets = setsJson.results || [];
+  const sets: LorcastSet[] = setsJson.results || [];
+  const chapters = sets.filter((set) => /^\d+$/.test(set.code));
+  console.log(`📚 ${chapters.length} chapitres à relever`);
 
-  for (const s of sets.filter((x: any) => /^\d+$/.test(x.code))) {
+  const cardsByChapter = await mapWithConcurrency(chapters, FETCH_CONCURRENCY, async (s) => {
     console.log(`📦 Set ${s.code}`);
+    const cards = await fetchJson(`https://api.lorcast.com/v0/sets/${s.code}/cards`);
+    return Array.isArray(cards) ? (cards as LorcastCard[]).map((card) => ({ ...card, setCode: s.code })) : [];
+  });
 
-    const res = await fetch(`https://api.lorcast.com/v0/sets/${s.code}/cards`);
-    const cards = await res.json();
+  const cards = cardsByChapter.flat();
+  let updated = 0;
+  let failed = 0;
+  console.log(`💳 ${cards.length} cartes à mettre à jour`);
 
-    if (!Array.isArray(cards)) continue;
+  await mapWithConcurrency(cards, WRITE_CONCURRENCY, async (card) => {
+    const normal = Number(card.prices?.usd);
+    const foil = Number(card.prices?.usd_foil);
+    const priceUsd = Number.isFinite(normal) ? normal : null;
+    const priceUsdFoil = Number.isFinite(foil) ? foil : null;
 
-    let count = 0;
-
-    for (const c of cards) {
-      const priceUsd =
-        c.prices?.usd && !isNaN(Number(c.prices.usd))
-          ? Number(c.prices.usd)
-          : null;
-
-      const priceUsdFoil =
-        c.prices?.usd_foil != null ? Number(c.prices.usd_foil) : null;
-
-      try {
-        await prisma.card.upsert({
-          where: { id: c.id },
-          update: {
-            usd: priceUsd,
-            usd_foil: priceUsdFoil,
-          },
-          create: {
-            id: c.id,
-            name: "Unknown",
-            setName: s.code,
-            usd: priceUsd,
-            usd_foil: priceUsdFoil,
-          },
-        });
-
-        count++;
-
-        if (count % 20 === 0) {
-          console.log(`💰 ${count} maj`);
-          await sleep(50);
-        }
-      } catch (err) {
-        console.log("❌ Erreur carte:", c.id);
-        console.log(err);
-      }
+    try {
+      await prisma.card.upsert({
+        where: { id: card.id },
+        update: { usd: priceUsd, usd_foil: priceUsdFoil },
+        create: { id: card.id, name: "Unknown", setName: card.setCode, usd: priceUsd, usd_foil: priceUsdFoil },
+      });
+      updated++;
+      if (updated % 100 === 0) console.log(`💰 ${updated}/${cards.length} cartes mises à jour`);
+    } catch (error) {
+      failed++;
+      console.error(`❌ Carte ${card.id} ignorée`, error);
     }
-  }
+  });
+
+  console.log(`✅ ${updated} cartes mises à jour${failed ? ` · ${failed} ignorées` : ""}`);
 
   // Conserve un relevé quotidien uniquement pour les cartes présentes dans
   // les collections : les courbes et alertes ne grossissent pas inutilement.
