@@ -221,6 +221,10 @@ export default function ChapitresPage() {
             </div>
           </a>
         ))}
+        <a href="/puzzles" className="chapterCard puzzleGallery" style={{ backgroundImage: "linear-gradient(135deg, rgba(25,54,97,.76), rgba(105,74,151,.62)), url('/puzzles/givresort-3x3.png')" }}>
+          <div className="chapterTop"><div><div className="chapterCode">GALERIE SPÉCIALE</div><div className="chapterName">🧩 Puzzles</div></div><div className="chapterPct">3×3</div></div>
+          <div className="chapterBottom"><p>Reconstitue les illustrations trouvées dans tes boosters et suis chaque morceau manquant.</p><div className="chapterDoubles">2 puzzles à explorer →</div></div>
+        </a>
       </section>
 
       {/* ================= STYLES ================= */}
@@ -295,6 +299,8 @@ export default function ChapitresPage() {
           transform: translateY(-4px);
           box-shadow: 0 18px 45px rgba(0, 0, 0, 0.6);
         }
+        .puzzleGallery { background-size: cover; background-position: center; color: white; }
+        .puzzleGallery .chapterBottom p { margin: 0 0 13px; max-width: 260px; color: rgba(255,255,255,.87); font-size: 12px; line-height: 1.45; }
 
         .chapterTop {
           display: flex;

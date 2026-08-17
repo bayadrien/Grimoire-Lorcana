@@ -52,7 +52,6 @@ export default function AppHeader() {
     { href: "/deck", label: "Deck", icon: "🃏" },
     { href: "/opening", label: "Opening", icon: "🎁" },
     { href: "/opening/history", label: "Historique", icon: "📜" },
-    { href: "/puzzles", label: "Puzzles", icon: "🧩" },
   ];
 
   return (
