@@ -42,6 +42,11 @@ type CollectionView = "all" | "missing" | "owned" | "doubles";
 const PLACEHOLDER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='900'%3E%3Crect width='100%25' height='100%25' fill='%23f7edd9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b5e50' font-size='28' font-family='Arial'%3EImage indisponible%3C/text%3E%3C/svg%3E";
 
+function collectionNumber(value?: string | null) {
+  const match = value?.match(/\d+/);
+  return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+}
+
 /* ================= PAGE ================= */
 
 export default function ChapitreDetail() {
@@ -207,21 +212,10 @@ export default function ChapitreDetail() {
         return true;
       });
 
-console.log("SEARCH =", search);
-console.log("CARD SAMPLE =", cards[0]);
-
+    // L'album conserve toujours l'ordre officiel, même quand on filtre les cartes.
     return filtered.sort((a, b) => {
-      const aOwned =
-        (collection[a.id]?.normal ?? 0) +
-          (collection[a.id]?.foil ?? 0) >
-        0;
-      const bOwned =
-        (collection[b.id]?.normal ?? 0) +
-          (collection[b.id]?.foil ?? 0) >
-        0;
-
-      if (aOwned === bOwned) return 0;
-      return aOwned ? -1 : 1;
+      const numberDifference = collectionNumber(a.collection_number) - collectionNumber(b.collection_number);
+      return numberDifference || (a.name_fr || a.name || "").localeCompare(b.name_fr || b.name || "", "fr");
     });
   }, [cards, chapterCode, q, query, collectionView, collection]);
 
@@ -333,24 +327,9 @@ console.log("CARD SAMPLE =", cards[0]);
       </div>
 
       <section className="chapterGrid">
-        {visibleCards.map((c, index) => {
-          console.log("CARD ID =", c.id, c.name);
+        {visibleCards.map((c) => {
           const qtys = collection[c.id] ?? { normal: 0, foil: 0 };
           const total = qtys.normal + qtys.foil;
-
-          const previous =
-            index > 0
-              ? (() => {
-                  const prev = collection[visibleCards[index - 1].id] ?? {
-                    normal: 0,
-                    foil: 0,
-                  };
-                  return prev.normal + prev.foil;
-                })()
-              : null;
-
-          const showSeparator =
-            previous !== null && previous > 0 && total === 0;
 
           const variant = variantByCard[c.id] ?? "normal";
           const current = qtys[variant];
@@ -360,12 +339,6 @@ console.log("CARD SAMPLE =", cards[0]);
 
           return (
             <div key={c.id}>
-              {showSeparator && (
-                <div className="chapterSeparator">
-                  ⚪ Cartes manquantes
-                </div>
-              )}
-
               <article
                 className={[
                   "card",
@@ -379,6 +352,9 @@ console.log("CARD SAMPLE =", cards[0]);
               >
                 <div className="cardMedia">
                   <img src={c.imageUrl || PLACEHOLDER} alt={c.name} />
+                  <span className="albumNumber" title={`Numéro de collection ${c.collection_number || "inconnu"}`}>
+                    #{c.collection_number?.split("/")[0] || "—"}
+                  </span>
                   <a
                     className="cardDetailLink"
                     href={`/cartes/${c.id}`}
@@ -581,6 +557,7 @@ console.log("CARD SAMPLE =", cards[0]);
           box-shadow: 0 22px 45px rgba(22,31,48,.34);
         }
         .cardDetailLink { position: absolute; inset: 0; z-index: 3; }
+        .albumNumber { position: absolute; z-index: 5; left: 8px; bottom: 8px; padding: 5px 7px; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; background: rgba(26,20,42,.83); box-shadow: 0 4px 11px rgba(0,0,0,.22); color: #fff9df; font-size: 10px; font-weight: 900; letter-spacing: .02em; pointer-events: none; }
 
         .loadMore { display: flex; justify-content: center; margin: 22px 0 8px; }
         .loadMore button { padding: 11px 18px; background: #243b64; color: white; border-color: #243b64; }
