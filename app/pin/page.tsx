@@ -16,7 +16,8 @@ export default function PinPage() {
     });
 
     if (!r.ok) {
-      setErr("PIN incorrect 😅");
+      const data = await r.json().catch(() => ({}));
+      setErr(data.error || "PIN incorrect 😅");
       return;
     }
     router.push("/choose");

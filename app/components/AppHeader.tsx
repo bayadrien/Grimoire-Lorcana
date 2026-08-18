@@ -50,6 +50,7 @@ export default function AppHeader() {
     { href: "/stats", label: "Stats", icon: "📊" },
     { href: "/echange", label: "Échange", icon: "🤝" },
     { href: "/deck", label: "Deck", icon: "🃏" },
+    { href: "/scan", label: "Scan", icon: "📷" },
     { href: "/opening", label: "Opening", icon: "🎁" },
     { href: "/opening/history", label: "Historique", icon: "📜" },
   ];
@@ -117,7 +118,7 @@ export default function AppHeader() {
       <nav className="appMobileDock" aria-label="Raccourcis mobiles">
         <Link href="/" className={pathname === "/" ? "active" : ""}><span>✦</span>Accueil</Link>
         <Link href="/chapitres" className={pathname.startsWith("/chapitres") ? "active" : ""}><span>📚</span>Album</Link>
-        <Link href="/opening" className="scan"><span>⌁</span>Scanner</Link>
+        <Link href="/scan" className={`scan ${pathname.startsWith("/scan") ? "active" : ""}`}><span>⌁</span>Scan</Link>
         <Link href="/stats" className={pathname.startsWith("/stats") ? "active" : ""}><span>📊</span>Stats</Link>
         <button onClick={() => setMenuOpen(true)}><span>☰</span>Plus</button>
       </nav>
