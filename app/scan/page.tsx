@@ -63,6 +63,12 @@ export default function ScanPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1080 }, height: { ideal: 1440 }, aspectRatio: { ideal: 3 / 4 } }, audio: false });
       streamRef.current = stream;
       setCameraOpen(true);
+      window.setTimeout(() => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        void video.play().catch(() => setStatus("Touchez l’aperçu pour démarrer la caméra."));
+      }, 0);
       window.setTimeout(async () => {
         const track = stream.getVideoTracks()[0] as MediaStreamTrack & { getCapabilities?: () => CameraCapabilities };
         const capabilities = track.getCapabilities?.();
@@ -139,7 +145,7 @@ export default function ScanPage() {
   return <main><AppHeader /><div className="wrap">
     <section className="hero"><p>SCAN TOUT</p><h1>Repère les cartes<br /><em>qui te manquent.</em></h1><span>Recherche tous les chapitres, vérifie vos collections et la valeur sur place.</span></section>
     <section className="cameraCard">
-      <div className="cameraViewport">{cameraOpen ? <video ref={videoRef} autoPlay playsInline muted /> : <button className="openCamera" onClick={openCamera}><span>📷</span>Ouvrir la caméra</button>}<div className="frame"><b>NUMÉRO DE LA CARTE</b></div></div>
+      <div className="cameraViewport">{cameraOpen ? <video ref={(element) => { videoRef.current = element; if (element && streamRef.current) { element.srcObject = streamRef.current; void element.play().catch(() => setStatus("Touchez l’aperçu pour démarrer la caméra.")); } }} autoPlay playsInline muted onClick={() => void videoRef.current?.play()} /> : <button className="openCamera" onClick={openCamera}><span>📷</span>Ouvrir la caméra</button>}<div className="frame"><b>NUMÉRO DE LA CARTE</b></div></div>
       <p className="status">{isScanning ? "⌛ " : "✦ "}{status}</p>
       <div className="actions"><button className="primary" onClick={cameraOpen ? analyze : openCamera} disabled={isScanning}>{isScanning ? "Lecture…" : "✨ Analyser la carte"}</button>{results.length > 0 && <button className="secondary" onClick={reset}>Carte suivante</button>}</div>
       <form onSubmit={(event) => { event.preventDefault(); void search(manual, manual); }}><input value={manual} onChange={(event) => setManual(event.target.value)} placeholder="Numéro ou nom de carte" /><button>Rechercher</button></form>
