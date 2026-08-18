@@ -16,15 +16,30 @@ type CameraCapabilities = { focusMode?: string[]; zoom?: { min: number; max: num
 
 const euro = (value: number) => `${value.toFixed(2)} €`;
 
-function numberFromOcr(value: string) {
-  const corrected = value.toUpperCase().replace(/[OQD]/g, "0").replace(/[IL|]/g, "1").replace(/S/g, "5");
-  return (corrected.match(/\d{1,3}\s*\/\s*\d{2,3}/g) ?? []).map((part) => part.replace(/\s/g, ""));
+type CardCode = { number: string; chapter: string };
+
+function codesFromOcr(value: string): CardCode[] {
+  // Le bas d'une carte Lorcana suit le format : 147/207 · FR · 13.
+  // Le chapitre est indispensable : le même numéro peut exister dans plusieurs sets.
+  const corrected = value.toUpperCase()
+    .replace(/[OQD]/g, "0")
+    .replace(/[IL|]/g, "1")
+    .replace(/S/g, "5")
+    .replace(/[•·]/g, " ");
+  const matches = corrected.matchAll(/(\d{1,3})\s*\/\s*(204|207)\D{0,16}(\d{1,2})(?!\d)/g);
+  return Array.from(matches, (match) => ({ number: `${Number(match[1])}/${match[2]}`, chapter: String(Number(match[3])) }));
 }
 
-function mostFrequent(readings: string[]) {
+function mostFrequentCode(readings: CardCode[]) {
   const counts = new Map<string, number>();
-  readings.forEach((reading) => counts.set(reading, (counts.get(reading) ?? 0) + 1));
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+  readings.forEach((reading) => {
+    const key = `${reading.number}|${reading.chapter}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+  const key = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (!key) return null;
+  const [number, chapter] = key.split("|");
+  return { number, chapter };
 }
 
 export default function ScanPage() {
@@ -44,10 +59,10 @@ export default function ScanPage() {
     return () => { streamRef.current?.getTracks().forEach((track) => track.stop()); if (workerRef.current) void workerRef.current.terminate(); };
   }, []);
 
-  async function search(number: string, name = "") {
+  async function search(number: string, name = "", chapter = "") {
     if (!number.trim() && !name.trim()) return;
-    setStatus("Recherche dans tous les chapitres…");
-    const response = await fetch(`/api/cards/market-scan?userId=${userId}&number=${encodeURIComponent(number)}&name=${encodeURIComponent(name)}`);
+    setStatus(chapter ? `Recherche dans le chapitre ${chapter}…` : "Recherche dans tous les chapitres…");
+    const response = await fetch(`/api/cards/market-scan?userId=${userId}&number=${encodeURIComponent(number)}&name=${encodeURIComponent(name)}&chapter=${encodeURIComponent(chapter)}`);
     const found = await response.json();
     const list = Array.isArray(found) ? found : [];
     setResults(list);
@@ -131,16 +146,16 @@ export default function ScanPage() {
       await new Promise((resolve) => window.setTimeout(resolve, 180));
       captures.push(cropFrame(video));
       const ocr = await worker();
-      const readings: string[] = [];
+      const readings: CardCode[] = [];
       for (let index = 0; index < captures.length; index += 1) {
-        setStatus(`Lecture du numéro ${index + 1}/3…`);
+        setStatus(`Lecture du code ${index + 1}/3…`);
         const { data } = await ocr.recognize(captures[index]);
-        readings.push(...numberFromOcr(data.text));
+        readings.push(...codesFromOcr(data.text));
       }
-      const number = mostFrequent(readings);
-      if (!number) { setStatus("Aucun numéro lisible dans le cadre. Place uniquement le numéro de collection dans le rectangle doré, sans reflet."); return; }
-      setManual(number);
-      await search(readings.join(" "));
+      const code = mostFrequentCode(readings);
+      if (!code) { setStatus("Code incomplet. Place la ligne entière XXX/204 ou 207 · FR · chapitre dans le rectangle doré, sans reflet."); return; }
+      setManual(`${code.number} · FR · ${code.chapter}`);
+      await search(code.number, "", code.chapter);
     } catch (error) {
       console.error("MARKET SCAN OCR ERROR:", error);
       setStatus("La lecture a échoué. Essaie avec davantage de lumière ou la recherche manuelle.");
@@ -161,10 +176,10 @@ export default function ScanPage() {
   return <main><AppHeader /><div className="wrap">
     <section className="hero"><p>SCAN TOUT</p><h1>Repère les cartes <em>qui te manquent.</em></h1><span>Recherche tous les chapitres, vérifie vos collections et la valeur sur place.</span></section>
     <section className="cameraCard">
-      <div className="cameraViewport">{cameraOpen ? <video ref={(element) => { videoRef.current = element; if (element && streamRef.current) { element.srcObject = streamRef.current; void element.play().catch(() => setStatus("Touchez l’aperçu pour démarrer la caméra.")); } }} autoPlay playsInline muted onClick={() => void videoRef.current?.play()} /> : <button className="openCamera" onClick={openCamera}><span>📷</span>Ouvrir la caméra</button>}<div className="frame" ref={frameRef}><b>NUMÉRO DE LA CARTE</b></div></div>
+      <div className="cameraViewport">{cameraOpen ? <video ref={(element) => { videoRef.current = element; if (element && streamRef.current) { element.srcObject = streamRef.current; void element.play().catch(() => setStatus("Touchez l’aperçu pour démarrer la caméra.")); } }} autoPlay playsInline muted onClick={() => void videoRef.current?.play()} /> : <button className="openCamera" onClick={openCamera}><span>📷</span>Ouvrir la caméra</button>}<div className="frame" ref={frameRef}><b>XXX / 204 · FR · CHAPITRE</b></div></div>
       <p className="status">{isScanning ? "⌛ " : "✦ "}{status}</p>
       <div className="actions"><button className="primary" onClick={cameraOpen ? analyze : openCamera} disabled={isScanning}>{isScanning ? "Lecture…" : "✨ Analyser la carte"}</button>{results.length > 0 && <button className="secondary" onClick={reset}>Carte suivante</button>}</div>
-      <form onSubmit={(event) => { event.preventDefault(); void search(manual, manual); }}><input value={manual} onChange={(event) => setManual(event.target.value)} placeholder="Numéro ou nom de carte" /><button>Rechercher</button></form>
+      <form onSubmit={(event) => { event.preventDefault(); const code = mostFrequentCode(codesFromOcr(manual)); void search(code?.number || manual, code ? "" : manual, code?.chapter); }}><input value={manual} onChange={(event) => setManual(event.target.value)} placeholder="147/207 · FR · 13 ou nom" /><button>Rechercher</button></form>
     </section>
     {results.length > 0 && <section className="resultList"><p className="listLabel">PROPOSITIONS · CHOISIS LA BONNE CARTE</p>{results.map((result) => <article key={result.id} className={`result ${result.mine.status}`}>
       <img src={result.imageUrl || ""} alt={result.name_fr || result.name || "Carte Lorcana"} />

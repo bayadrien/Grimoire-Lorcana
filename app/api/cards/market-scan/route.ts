@@ -55,11 +55,13 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const number = searchParams.get("number")?.trim() ?? "";
     const name = searchParams.get("name")?.trim() ?? "";
+    const chapter = searchParams.get("chapter")?.trim() ?? "";
+    const chapterFilter = /^\d{1,2}$/.test(chapter) ? chapter : undefined;
     const userId = searchParams.get("userId") === "angele" ? "angele" : "adrien";
     const otherUserId = userId === "adrien" ? "angele" : "adrien";
     if (!number && !name) return NextResponse.json([]);
 
-    const cards = await prisma.card.findMany({ select: { id: true, name: true, name_fr: true, collection_number: true, imageUrl: true, setCode: true, usd: true, usd_foil: true } });
+    const cards = await prisma.card.findMany({ where: chapterFilter ? { setCode: chapterFilter } : undefined, select: { id: true, name: true, name_fr: true, collection_number: true, imageUrl: true, setCode: true, usd: true, usd_foil: true } });
     const matches = cards.map((card) => ({ ...card, confidence: scoreCard(card, number, name) })).filter((card) => card.confidence >= 25).sort((a, b) => b.confidence - a.confidence).slice(0, 5);
     if (!matches.length) return NextResponse.json([]);
 
