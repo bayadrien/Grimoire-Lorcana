@@ -92,13 +92,63 @@ model Trade {
 }
 
 model BoosterOpening {
-  id           String        @id @default(uuid())
-  userId       String
-  chapter      Int
-  boosterImage String
-  totalValue   Float
-  createdAt    DateTime      @default(now())
-  cards        BoosterCard[]
+  id              String          @id @default(uuid())
+  userId          String
+  chapter         Int
+  boosterImage    String
+  totalValue      Float
+  createdAt       DateTime        @default(now())
+  sessionId       String?
+  session         OpeningSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  placeId         String?
+  place           OpeningPlace?   @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  provenanceType  String?
+  provenanceNote  String?
+  paidPrice       Float?
+  priceScope      String?
+  comment         String?
+  cards           BoosterCard[]
+
+  @@index([userId, createdAt])
+  @@index([sessionId])
+  @@index([placeId])
+}
+
+model OpeningPlace {
+  id          String           @id @default(uuid())
+  userId      String
+  name        String
+  city        String?
+  kind        String           @default("store")
+  lookupKey   String
+  useCount    Int              @default(0)
+  lastUsedAt  DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+  sessions    OpeningSession[]
+  openings    BoosterOpening[]
+
+  @@unique([userId, lookupKey])
+  @@index([userId, lastUsedAt])
+  @@index([userId, useCount])
+}
+
+model OpeningSession {
+  id              String           @id @default(uuid())
+  userId          String
+  title           String?
+  placeId         String?
+  place           OpeningPlace?    @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  provenanceType  String
+  provenanceNote  String?
+  paidPrice       Float?
+  priceScope      String           @default("product")
+  comment         String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  openings        BoosterOpening[]
+
+  @@index([userId, updatedAt])
+  @@index([placeId])
 }
 
 model BoosterCard {

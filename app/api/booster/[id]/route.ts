@@ -11,6 +11,8 @@ export async function GET(
     const opening = await prisma.boosterOpening.findUnique({
       where: { id },
       include: {
+        session: { include: { place: true } },
+        place: true,
         cards: {
           include: {
             card: true,

@@ -9,6 +9,8 @@ export async function GET() {
       },
       take: 20,
       include: {
+        session: { include: { place: true } },
+        place: true,
         cards: {
           include: {
             card: true, // 🔥 récupère les données (usd, image, etc)

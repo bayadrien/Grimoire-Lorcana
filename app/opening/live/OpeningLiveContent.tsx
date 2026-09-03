@@ -36,6 +36,7 @@ export default function OpeningLiveContent() {
   const boosterImage = decodeURIComponent(params.get("booster") || "");
 
   const [cards, setCards] = useState<Card[]>([]);
+  const [openingMetadata, setOpeningMetadata] = useState<Record<string, unknown> | null>(null);
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<Card[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,6 +120,15 @@ const progress = (cards.length / 12) * 100;
       streamRef.current?.getTracks().forEach((track) => track.stop());
       if (ocrWorkerRef.current) void ocrWorkerRef.current.terminate();
     };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const draft = sessionStorage.getItem("grimoire-opening-draft");
+      setOpeningMetadata(draft ? JSON.parse(draft) : null);
+    } catch {
+      setOpeningMetadata(null);
+    }
   }, []);
 
   async function openScanner() {
@@ -547,6 +557,7 @@ const progress = (cards.length / 12) * 100;
               chapter,
               boosterImage,
               cards,
+              metadata: openingMetadata,
             }),
           });
 
