@@ -2,7 +2,7 @@
   "compilerOptions": {
     /* ===== Base ===== */
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
 
     /* ===== Target & Libs ===== */
     "target": "ES2017",

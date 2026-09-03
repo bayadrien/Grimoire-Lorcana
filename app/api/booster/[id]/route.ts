@@ -1,6 +1,49 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+type OpeningMetadata = {
+  sessionId?: string;
+  createSession?: boolean;
+  title?: string;
+  placeName?: string;
+  placeCity?: string;
+  placeType?: string;
+  provenanceType?: string;
+  provenanceNote?: string;
+  paidPrice?: number | string | null;
+  priceScope?: string;
+  comment?: string;
+};
+
+const clean = (value?: string | null) => value?.trim() || null;
+const price = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
+async function upsertPlace(tx: any, userId: string, metadata: OpeningMetadata) {
+  const name = clean(metadata.placeName);
+  if (!name) return null;
+
+  const city = clean(metadata.placeCity);
+  const normalized = `${name.toLocaleLowerCase("fr-FR")}|${(city || "").toLocaleLowerCase("fr-FR")}`;
+  const existing = await tx.openingPlace.findUnique({
+    where: { userId_normalized: { userId, normalized } },
+  });
+
+  if (existing) {
+    return tx.openingPlace.update({
+      where: { id: existing.id },
+      data: { name, city, type: clean(metadata.placeType), lastUsedAt: new Date() },
+    });
+  }
+
+  return tx.openingPlace.create({
+    data: { userId, name, city, type: clean(metadata.placeType), normalized },
+  });
+}
+
 export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
@@ -68,5 +111,105 @@ export async function GET(
   } catch (error) {
     console.error("API ERROR:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+// Modifie uniquement les informations de provenance d'un booster. Les tirages
+// et la collection ne sont volontairement jamais touchés ici.
+export async function PATCH(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const body = await req.json();
+    const userId = body?.userId === "angele" ? "angele" : body?.userId === "adrien" ? "adrien" : null;
+    const metadata = (body?.metadata || {}) as OpeningMetadata;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Profil invalide" }, { status: 400 });
+    }
+
+    const opening = await prisma.boosterOpening.findFirst({ where: { id, userId } });
+    if (!opening) {
+      return NextResponse.json({ error: "Booster introuvable" }, { status: 404 });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (metadata.sessionId) {
+        const session = await tx.openingSession.findFirst({
+          where: { id: metadata.sessionId, userId },
+        });
+        if (!session) throw new Error("SESSION_NOT_FOUND");
+
+        await tx.openingSession.update({
+          where: { id: session.id },
+          data: { updatedAt: new Date() },
+        });
+        await tx.boosterOpening.update({
+          where: { id },
+          data: {
+            sessionId: session.id,
+            placeId: null,
+            provenanceType: null,
+            provenanceNote: null,
+            paidPrice: null,
+            priceScope: null,
+            comment: null,
+          },
+        });
+        return;
+      }
+
+      const place = await upsertPlace(tx, userId, metadata);
+      if (metadata.createSession) {
+        const session = await tx.openingSession.create({
+          data: {
+            userId,
+            title: clean(metadata.title) || "Ouverture groupée",
+            placeId: place?.id || null,
+            provenanceType: clean(metadata.provenanceType),
+            provenanceNote: clean(metadata.provenanceNote),
+            paidPrice: price(metadata.paidPrice),
+            priceScope: clean(metadata.priceScope) || "session",
+            comment: clean(metadata.comment),
+          },
+        });
+        await tx.boosterOpening.update({
+          where: { id },
+          data: {
+            sessionId: session.id,
+            placeId: null,
+            provenanceType: null,
+            provenanceNote: null,
+            paidPrice: null,
+            priceScope: null,
+            comment: null,
+          },
+        });
+        return;
+      }
+
+      await tx.boosterOpening.update({
+        where: { id },
+        data: {
+          sessionId: null,
+          placeId: place?.id || null,
+          provenanceType: clean(metadata.provenanceType),
+          provenanceNote: clean(metadata.provenanceNote),
+          paidPrice: price(metadata.paidPrice),
+          priceScope: clean(metadata.priceScope) || "booster",
+          comment: clean(metadata.comment),
+        },
+      });
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("OPENING_METADATA_PATCH_ERROR:", error);
+    const message = error instanceof Error && error.message === "SESSION_NOT_FOUND"
+      ? "Cette session est introuvable."
+      : "Impossible de modifier ce booster.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
