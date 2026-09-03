@@ -1,0 +1,2 @@
+ALTER TABLE "OpeningPlace"
+ADD COLUMN IF NOT EXISTS "url" TEXT;

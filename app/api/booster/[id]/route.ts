@@ -5,9 +5,7 @@ type OpeningMetadata = {
   sessionId?: string;
   createSession?: boolean;
   title?: string;
-  placeName?: string;
-  placeCity?: string;
-  placeType?: string;
+  place?: { name?: string; kind?: string; url?: string } | null;
   provenanceType?: string;
   provenanceNote?: string;
   paidPrice?: number | string | null;
@@ -23,24 +21,23 @@ const price = (value?: number | string | null) => {
 };
 
 async function upsertPlace(tx: any, userId: string, metadata: OpeningMetadata) {
-  const name = clean(metadata.placeName);
+  const name = clean(metadata.place?.name);
   if (!name) return null;
 
-  const city = clean(metadata.placeCity);
-  const normalized = `${name.toLocaleLowerCase("fr-FR")}|${(city || "").toLocaleLowerCase("fr-FR")}`;
-  const existing = await tx.openingPlace.findUnique({
-    where: { userId_normalized: { userId, normalized } },
-  });
+  const kind = ["store", "online", "other"].includes(metadata.place?.kind || "") ? metadata.place?.kind! : "store";
+  const url = clean(metadata.place?.url);
+  const existing = await tx.openingPlace.findFirst({ where: { userId, name, kind } });
 
   if (existing) {
     return tx.openingPlace.update({
       where: { id: existing.id },
-      data: { name, city, type: clean(metadata.placeType), lastUsedAt: new Date() },
+      data: { url, lastUsedAt: new Date(), useCount: { increment: 1 } },
     });
   }
 
+  const lookupKey = `${kind}|${name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()}`;
   return tx.openingPlace.create({
-    data: { userId, name, city, type: clean(metadata.placeType), normalized },
+    data: { userId, name, kind, url, lookupKey, useCount: 1 },
   });
 }
 
@@ -166,7 +163,7 @@ export async function PATCH(
         const session = await tx.openingSession.create({
           data: {
             userId,
-            title: clean(metadata.title) || "Ouverture groupée",
+            title: clean(metadata.title) || `${clean(metadata.provenanceType) || "Booster"} · Chapitre ${opening.chapter}`,
             placeId: place?.id || null,
             provenanceType: clean(metadata.provenanceType),
             provenanceNote: clean(metadata.provenanceNote),

@@ -120,6 +120,7 @@ model OpeningPlace {
   name        String
   city        String?
   kind        String           @default("store")
+  url         String?
   lookupKey   String
   useCount    Int              @default(0)
   lastUsedAt  DateTime         @default(now())

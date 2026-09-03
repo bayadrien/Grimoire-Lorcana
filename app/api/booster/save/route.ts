@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-type PlaceInput = { name?: unknown; city?: unknown; kind?: unknown };
+type PlaceInput = { name?: unknown; city?: unknown; kind?: unknown; url?: unknown };
 type OpeningMetadata = { sessionId?: unknown; createSession?: unknown; title?: unknown; place?: PlaceInput | null; provenanceType?: unknown; provenanceNote?: unknown; paidPrice?: unknown; priceScope?: unknown; comment?: unknown };
 const clean = (value: unknown, max = 180) => typeof value === "string" ? value.trim().slice(0, max) : "";
 const priceFrom = (value: unknown) => { const parsed = typeof value === "number" ? value : Number(String(value ?? "").replace(",", ".")); return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed * 100) / 100 : null; };
@@ -12,11 +12,12 @@ async function usePlace(tx: any, userId: string, input: PlaceInput | null | unde
   if (!name) return null;
   const city = clean(input?.city);
   const kind = ["store", "online", "event", "other"].includes(clean(input?.kind)) ? clean(input?.kind) : "store";
+  const url = clean(input?.url, 500);
   const lookupKey = [kind, name, city].map(normalise).join("|");
   const place = await tx.openingPlace.upsert({
     where: { userId_lookupKey: { userId, lookupKey } },
-    update: { name, city: city || null, kind, lastUsedAt: new Date(), useCount: { increment: 1 } },
-    create: { userId, name, city: city || null, kind, lookupKey, useCount: 1, lastUsedAt: new Date() },
+    update: { name, city: city || null, kind, url: url || null, lastUsedAt: new Date(), useCount: { increment: 1 } },
+    create: { userId, name, city: city || null, kind, url: url || null, lookupKey, useCount: 1, lastUsedAt: new Date() },
   });
   return place.id;
 }
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
         await tx.openingSession.update({ where: { id: session.id }, data: { updatedAt: new Date() } });
       } else if (metadata.createSession) {
         placeId = await usePlace(tx, safeUserId, metadata.place);
-        const session = await tx.openingSession.create({ data: { userId: safeUserId, title: clean(metadata.title) || null, placeId, provenanceType, provenanceNote: provenanceNote || null, paidPrice, priceScope, comment: comment || null } });
+        const session = await tx.openingSession.create({ data: { userId: safeUserId, title: clean(metadata.title) || `${provenanceType} · Chapitre ${Number(chapter)}`, placeId, provenanceType, provenanceNote: provenanceNote || null, paidPrice, priceScope, comment: comment || null } });
         sessionId = session.id;
       } else if (hasMetadata) {
         placeId = await usePlace(tx, safeUserId, metadata.place);
