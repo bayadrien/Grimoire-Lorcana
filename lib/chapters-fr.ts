@@ -12,4 +12,5 @@ export const CHAPTERS_NAMES_FR: Record<string, string> = {
   "11": "Givresort",
   "12": "Contrées Inconnues",
   "13": "Invasion Épineuse",
+  "14": "Hyperia City",
 };

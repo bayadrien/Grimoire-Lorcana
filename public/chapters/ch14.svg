@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600" role="img" aria-labelledby="title">
+  <title id="title">Miniature Hyperia City</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17143e"/><stop offset=".58" stop-color="#65408c"/><stop offset="1" stop-color="#ec887d"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff2a2"/><stop offset="1" stop-color="#ed9b45"/></linearGradient>
+  </defs>
+  <rect width="480" height="600" rx="34" fill="url(#bg)"/>
+  <circle cx="374" cy="116" r="84" fill="#ffd66b" opacity=".24"/>
+  <path d="M0 436l68-68 58 31 69-124 78 91 73-151 70 168 64-49v266H0z" fill="#171634"/>
+  <path d="M28 600V360h92v240M146 600V292h110v308M282 600V246h100v354M402 600V330h78v270" fill="#12132e"/>
+  <g fill="#ffe783" opacity=".78">
+    <path d="M45 390h11v18H45zm28 0h11v18H73zm-28 43h11v18H45zm28 0h11v18H73zm94-104h12v20h-12zm34 0h12v20h-12zm-34 47h12v20h-12zm34 0h12v20h-12zm102-91h12v20h-12zm32 0h12v20h-12zm-32 46h12v20h-12zm32 0h12v20h-12z"/>
+  </g>
+  <text x="30" y="62" fill="#fff5d7" font-family="Arial, sans-serif" font-size="22" font-weight="800" letter-spacing="4">CHAPITRE 14</text>
+  <text x="30" y="111" fill="#fff" font-family="Arial, sans-serif" font-size="40" font-weight="900">HYPERIA</text>
+  <text x="30" y="150" fill="url(#gold)" font-family="Georgia, serif" font-size="38" font-style="italic">City</text>
+</svg>

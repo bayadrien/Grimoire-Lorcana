@@ -12,7 +12,7 @@ function inkKey(v?: string | null): InkKey {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
-  const chapter = (url.searchParams.get("chapter") ?? "all").trim(); // "all" ou "1".."10"
+  const chapter = (url.searchParams.get("chapter") ?? "all").trim(); // "all" ou un code de chapitre
   const ink = (url.searchParams.get("ink") ?? "all").trim(); // "all" ou Amber...
 
   const cards = await prisma.card.findMany({
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     filters: {
       chapters: Array.from(new Set(cards.map(c => String(c.setCode ?? ""))))
-        .filter(s => /^\d+$/.test(s) && Number(s) >= 1 && Number(s) <= 10)
+        .filter(s => /^\d+$/.test(s) && Number(s) >= 1)
         .sort((a, b) => Number(a) - Number(b)),
       inks: ["Amber", "Amethyst", "Emerald", "Ruby", "Sapphire", "Steel"],
     },

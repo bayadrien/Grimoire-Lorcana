@@ -225,6 +225,18 @@ export default function ChapitreDetail() {
 
   const visibleCards = chapterCards.slice(0, visibleCount);
 
+  const incompleteMetadata = useMemo(() => {
+    const allCards = cards.filter((card) => Number(card.setCode) === chapterCode);
+    if (chapterCode !== 14 || !allCards.length) return null;
+
+    const missingNumbers = allCards.filter((card) => !card.collection_number).length;
+    const missingFrenchNames = allCards.filter((card) => !card.name_fr).length;
+
+    return missingNumbers || missingFrenchNames
+      ? { missingNumbers, missingFrenchNames }
+      : null;
+  }, [cards, chapterCode]);
+
   const chapterProgress = useMemo(() => {
     const allCards = cards.filter((card) => Number(card.setCode) === chapterCode);
     const owned = allCards.filter((card) => {
@@ -288,6 +300,19 @@ export default function ChapitreDetail() {
           <span>🎁 {chapterProgress.doubles} doublons</span>
         </div>
       </section>
+
+      {incompleteMetadata && (
+        <aside className="catalogNotice" role="status">
+          <strong>Catalogue en cours d’enrichissement</strong>
+          <span>
+            Les images et noms disponibles sont affichés. Il manque encore les numéros de
+            {" "}{incompleteMetadata.missingNumbers} cartes
+            {incompleteMetadata.missingFrenchNames
+              ? ` et ${incompleteMetadata.missingFrenchNames} traductions françaises`
+              : ""}. Ils seront ajoutés dès que la source du catalogue les fournira.
+          </span>
+        </aside>
+      )}
 
       <div className="chapterFilters">
         <input
@@ -508,6 +533,20 @@ export default function ChapitreDetail() {
         .chapterQuickStats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 13px; font-size: 12px; }
         .chapterQuickStats span, .chapterQuickStats button { padding: 6px 9px; border-radius: 999px; background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.18); color: white; }
         .chapterQuickStats button { cursor: pointer; }
+
+        .catalogNotice {
+          display: grid;
+          gap: 4px;
+          margin-top: 14px;
+          padding: 13px 16px;
+          border: 1px solid rgba(171,121,25,.25);
+          border-radius: 16px;
+          background: linear-gradient(120deg, rgba(255,247,220,.94), rgba(248,241,255,.94));
+          color: #5f4a21;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+        .catalogNotice strong { color: #3f315d; font-size: 13px; }
 
         .chapterFilters {
           display: flex;
