@@ -11,6 +11,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
     "sync:cards": "ts-node scripts/syncCards.ts",
+    "sync:new-cards": "ts-node scripts/syncNewCards.ts",
     "postinstall": "prisma generate",
     "sync:prices": "ts-node scripts/syncPrices.ts"
   },
