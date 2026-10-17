@@ -1,5 +1,5 @@
 /*
-  Recherche les cartes ajoutées tardivement dans les chapitres déjà connus.
+  Recherche les cartes ajoutees tardivement dans les chapitres deja connus.
 
   Commandes :
     npm run sync:new-cards
@@ -7,9 +7,11 @@
     npm run sync:new-cards -- 14
     npm run sync:new-cards -- 12 13 14 --dry-run
 
-  Le script ajoute uniquement les identifiants Lorcast absents de Card_new.
-  Il ne met à jour aucune carte existante et ne touche jamais aux collections,
-  decks, échanges ou historiques d'ouverture.
+  Le script :
+  - ajoute uniquement les identifiants Lorcast absents de Card_new ;
+  - detecte les cartes existantes rattachees au mauvais chapitre ;
+  - repare les anciennes cartes provisoires (nom Unknown ou metadonnees manquantes) ;
+  - ne touche jamais aux noms francais, collections, decks, echanges ou historiques.
 */
 
 import { PrismaClient } from "@prisma/client";
@@ -38,16 +40,46 @@ type LorcastCard = {
   } | null;
 };
 
+type ExistingCard = {
+  id: string;
+  name: string | null;
+  setName: string | null;
+  setCode: string | null;
+  collection_number: string | null;
+  ink: string | null;
+  rarity: string | null;
+  type: string | null;
+  text: string | null;
+  imageUrl: string | null;
+  usd: number | null;
+  usd_foil: number | null;
+};
+
 function numericPrice(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function isBlank(value: string | null | undefined) {
+  return !value || !value.trim();
+}
+
+function needsMetadataRepair(card: ExistingCard) {
+  return (
+    isBlank(card.name) ||
+    card.name === "Unknown" ||
+    isBlank(card.collection_number) ||
+    isBlank(card.imageUrl) ||
+    isBlank(card.rarity) ||
+    isBlank(card.ink)
+  );
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
   if (!response.ok) {
-    throw new Error(`${url} a répondu ${response.status}`);
+    throw new Error(`${url} a repondu ${response.status}`);
   }
   return response.json() as Promise<T>;
 }
@@ -65,13 +97,50 @@ function readArguments() {
   return { dryRun, requestedCodes };
 }
 
+function sourceData(card: LorcastCard, chapter: LorcastSet) {
+  return {
+    name: card.name,
+    setName: card.set?.name ?? chapter.name,
+    setCode: card.set?.code ?? chapter.code,
+    collection_number: card.collector_number ?? null,
+    ink: card.ink ?? null,
+    rarity: card.rarity ?? null,
+    type: Array.isArray(card.type) ? card.type.join(", ") : null,
+    text: card.text ?? null,
+    imageUrl: card.image_uris?.digital?.normal ?? null,
+    usd: numericPrice(card.prices?.usd),
+    usd_foil: numericPrice(card.prices?.usd_foil),
+  };
+}
+
+function repairData(existing: ExistingCard, card: LorcastCard, chapter: LorcastSet) {
+  const source = sourceData(card, chapter);
+  const chapterStoredAsSetName = existing.setCode === null && existing.setName === chapter.code;
+
+  return {
+    name: isBlank(existing.name) || existing.name === "Unknown" ? source.name : existing.name,
+    setName: chapterStoredAsSetName || isBlank(existing.setName) ? source.setName : existing.setName,
+    setCode: chapterStoredAsSetName ? chapter.code : existing.setCode,
+    collection_number: isBlank(existing.collection_number)
+      ? source.collection_number
+      : existing.collection_number,
+    ink: isBlank(existing.ink) ? source.ink : existing.ink,
+    rarity: isBlank(existing.rarity) ? source.rarity : existing.rarity,
+    type: isBlank(existing.type) ? source.type : existing.type,
+    text: isBlank(existing.text) ? source.text : existing.text,
+    imageUrl: isBlank(existing.imageUrl) ? source.imageUrl : existing.imageUrl,
+    usd: existing.usd ?? source.usd,
+    usd_foil: existing.usd_foil ?? source.usd_foil,
+  };
+}
+
 async function main() {
   const { dryRun, requestedCodes } = readArguments();
 
   console.log(
     dryRun
-      ? "🔎 Vérification des nouvelles cartes (simulation, aucune écriture)…"
-      : "🔎 Recherche de nouvelles cartes dans les chapitres existants…"
+      ? "Verification des nouvelles cartes (simulation, aucune ecriture)..."
+      : "Recherche de nouvelles cartes dans les chapitres existants..."
   );
 
   const [databaseSets, lorcastSetsJson] = await Promise.all([
@@ -96,91 +165,124 @@ async function main() {
     );
     if (unavailable.length) {
       console.warn(
-        `⚠️ Chapitre(s) ignoré(s), absent(s) de la base ou de Lorcast : ${unavailable.join(", ")}`
+        `Chapitre(s) ignore(s), absent(s) de la base ou de Lorcast : ${unavailable.join(", ")}`
       );
     }
   }
 
   if (!chapters.length) {
-    console.log("✅ Aucun chapitre existant à vérifier");
+    console.log("Aucun chapitre existant a verifier");
     return;
   }
 
-  console.log(`📚 Chapitres vérifiés : ${chapters.map((set) => set.code).join(", ")}`);
+  console.log(`Chapitres verifies : ${chapters.map((set) => set.code).join(", ")}`);
 
   let detected = 0;
   let inserted = 0;
+  let repairable = 0;
+  let repaired = 0;
+  let suspicious = 0;
 
   for (const chapter of chapters) {
-    const cards = await fetchJson<LorcastCard[]>(
-      `${API_ROOT}/sets/${chapter.code}/cards`
-    );
+    const cards = await fetchJson<LorcastCard[]>(`${API_ROOT}/sets/${chapter.code}/cards`);
 
     if (!Array.isArray(cards)) {
-      throw new Error(`Réponse inattendue pour le chapitre ${chapter.code}`);
+      throw new Error(`Reponse inattendue pour le chapitre ${chapter.code}`);
     }
 
     const existingCards = await prisma.card.findMany({
       where: { id: { in: cards.map((card) => card.id) } },
-      select: { id: true },
+      select: {
+        id: true,
+        name: true,
+        setName: true,
+        setCode: true,
+        collection_number: true,
+        ink: true,
+        rarity: true,
+        type: true,
+        text: true,
+        imageUrl: true,
+        usd: true,
+        usd_foil: true,
+      },
     });
-    const existingIds = new Set(existingCards.map((card) => card.id));
-    const missingCards = cards.filter((card) => !existingIds.has(card.id));
+    const existingById = new Map(existingCards.map((card) => [card.id, card]));
+    const missingCards = cards.filter((card) => !existingById.has(card.id));
+    const cardsToRepair = cards.filter((card) => {
+      const existing = existingById.get(card.id);
+      if (!existing) return false;
+      const chapterStoredAsSetName = existing.setCode === null && existing.setName === chapter.code;
+      return chapterStoredAsSetName || needsMetadataRepair(existing);
+    });
+    const wrongChapterCards = existingCards.filter(
+      (card) => card.setCode !== null && card.setCode !== chapter.code
+    );
+    const correctlyAssigned = existingCards.filter((card) => card.setCode === chapter.code).length;
 
     detected += missingCards.length;
-
-    if (!missingCards.length) {
-      console.log(`✅ Chapitre ${chapter.code} : aucune nouvelle carte (${cards.length} connues)`);
-      continue;
-    }
+    repairable += cardsToRepair.length;
+    suspicious += wrongChapterCards.length;
 
     console.log(
-      `🆕 Chapitre ${chapter.code} : ${missingCards.length} nouvelle(s) carte(s) détectée(s)`
+      `Chapitre ${chapter.code} : ${cards.length} chez Lorcast, ${correctlyAssigned} correctement rattachee(s), ` +
+        `${missingCards.length} nouvelle(s), ${cardsToRepair.length} a completer/reparer`
     );
+
     for (const card of missingCards) {
-      console.log(`   • ${card.collector_number ?? "?"} — ${card.name} (${card.id})`);
+      console.log(`   + ${card.collector_number ?? "?"} - ${card.name} (${card.id})`);
+    }
+    for (const card of wrongChapterCards) {
+      console.warn(
+        `   ! ${card.id} existe avec setCode=${card.setCode}; correction automatique ignoree`
+      );
     }
 
     if (dryRun) continue;
 
-    const result = await prisma.card.createMany({
-      data: missingCards.map((card) => ({
-        id: card.id,
-        name: card.name,
-        setName: card.set?.name ?? chapter.name,
-        setCode: card.set?.code ?? chapter.code,
-        collection_number: card.collector_number ?? null,
-        ink: card.ink ?? null,
-        rarity: card.rarity ?? null,
-        type: Array.isArray(card.type) ? card.type.join(", ") : null,
-        text: card.text ?? null,
-        imageUrl: card.image_uris?.digital?.normal ?? null,
-        usd: numericPrice(card.prices?.usd),
-        usd_foil: numericPrice(card.prices?.usd_foil),
-      })),
-      skipDuplicates: true,
-    });
+    if (missingCards.length) {
+      const result = await prisma.card.createMany({
+        data: missingCards.map((card) => ({ id: card.id, ...sourceData(card, chapter) })),
+        skipDuplicates: true,
+      });
+      inserted += result.count;
+      console.log(`   ${result.count} nouvelle(s) carte(s) ajoutee(s)`);
+    }
 
-    inserted += result.count;
-    console.log(`💾 Chapitre ${chapter.code} : ${result.count} carte(s) ajoutée(s)`);
+    for (const card of cardsToRepair) {
+      const existing = existingById.get(card.id);
+      if (!existing) continue;
+      await prisma.card.update({
+        where: { id: card.id },
+        data: repairData(existing, card, chapter),
+      });
+      repaired += 1;
+    }
+
+    if (cardsToRepair.length) {
+      console.log(`   ${cardsToRepair.length} carte(s) completee(s) ou reparee(s)`);
+    }
   }
 
   if (dryRun) {
     console.log(
-      `\n🧪 Simulation terminée : ${detected} nouvelle(s) carte(s) détectée(s), aucune écriture`
+      `\nSimulation terminee : ${detected} nouvelle(s), ${repairable} a reparer, ` +
+        `${suspicious} rattachement(s) suspect(s), aucune ecriture`
     );
   } else {
     console.log(
-      `\n🎉 Vérification terminée : ${detected} détectée(s), ${inserted} ajoutée(s)`
+      `\nVerification terminee : ${detected} nouvelle(s) detectee(s), ${inserted} ajoutee(s), ` +
+        `${repaired} completee(s)/reparee(s), ${suspicious} rattachement(s) suspect(s)`
     );
   }
 }
 
 main()
   .catch((error) => {
-    console.error("❌ Erreur :", error);
+    console.error("Erreur :", error);
     process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
+
