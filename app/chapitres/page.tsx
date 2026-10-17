@@ -47,7 +47,7 @@ const CHAPTER_BACKGROUNDS: Record<string, string> = {
   "11": "/chapters/11.jpg",
   "12": "/chapters/12.jpg",
   "13": "/chapters/13.jpg",
-  "14": "/chapters/14.svg",
+  "14": "/chapters/14.jpg",
 };
 
 function percent(a: number, b: number) {
@@ -165,19 +165,19 @@ export default function ChapitresPage() {
     <main className="shell">
             <AppHeader
               title="Grimoire Lorcana"
-              subtitle={`${chapters.length} chapitres • ${global.owned} / ${global.cards} cartes réunies`}
-              icon="📜"
+              subtitle={`${chapters.length} chapitres  ${global.owned} / ${global.cards} cartes r�unies`}
+              icon="??"
             />
 
       {!loading && (
         <section className="globalStats" aria-label="Progression globale">
-          <div><strong>{global.owned}</strong><span>réunies</span></div>
+          <div><strong>{global.owned}</strong><span>r�unies</span></div>
           <div><strong>{global.missing}</strong><span>manquantes</span></div>
           <div><strong>{global.doubles}</strong><span>doublons</span></div>
         </section>
       )}
 
-      {loading && <p className="loading">Chargement de la progression…</p>}
+      {loading && <p className="loading">Chargement de la progression.</p>}
 
       <section className="chaptersGrid">
         {chapters.map((ch) => (
@@ -209,22 +209,22 @@ export default function ChapitresPage() {
             <div className="chapterMetrics">
               <div>
                 <strong>{ch.duoOwned} <small>/ {ch.total}</small></strong>
-                <span>cartes réunies</span>
+                <span>cartes r�unies</span>
               </div>
               <div>
                 <strong>{ch.missing}</strong>
                 <span>manquantes</span>
               </div>
               {(ch.aDoubles + ch.gDoubles) > 0 && (
-                <div className="chapterDoubles">🎁 {ch.aDoubles + ch.gDoubles}</div>
+                <div className="chapterDoubles">?? {ch.aDoubles + ch.gDoubles}</div>
               )}
             </div>
             </div>
           </a>
         ))}
         <a href="/puzzles" className="chapterCard puzzleGallery" style={{ backgroundImage: "linear-gradient(135deg, rgba(25,54,97,.76), rgba(105,74,151,.62)), url('/puzzles/givresort-3x3.png')" }}>
-          <div className="chapterTop"><div><div className="chapterCode">GALERIE SPÉCIALE</div><div className="chapterName">🧩 Puzzles</div></div><div className="chapterPct">3×3</div></div>
-          <div className="chapterBottom"><p>Reconstitue les illustrations trouvées dans tes boosters et suis chaque morceau manquant.</p><div className="chapterDoubles">2 puzzles à explorer →</div></div>
+          <div className="chapterTop"><div><div className="chapterCode">GALERIE SP�CIALE</div><div className="chapterName">?? Puzzles</div></div><div className="chapterPct">3�3</div></div>
+          <div className="chapterBottom"><p>Reconstitue les illustrations trouv�es dans tes boosters et suis chaque morceau manquant.</p><div className="chapterDoubles">2 puzzles � explorer </div></div>
         </a>
       </section>
 
@@ -276,7 +276,7 @@ export default function ChapitresPage() {
           color: white;
         }
 
-        /* voile sombre pour la lisibilité */
+        /* voile sombre pour la lisibilit� */
         .chapterCard::before {
           content: "";
           position: absolute;
@@ -407,3 +407,4 @@ export default function ChapitresPage() {
     </main>
   );
 }
+
