@@ -630,8 +630,8 @@ export default function ChapitreDetail() {
           z-index: 20;
           box-shadow: 0 22px 45px rgba(22,31,48,.34);
         }
-        .cardDetailLink { position: absolute; inset: 0; z-index: 3; }
-        .albumNumber { position: absolute; z-index: 5; left: 8px; bottom: 8px; padding: 5px 7px; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; background: rgba(26,20,42,.83); box-shadow: 0 4px 11px rgba(0,0,0,.22); color: #fff9df; font-size: 10px; font-weight: 900; letter-spacing: .02em; pointer-events: none; }
+        .chapterGrid :global(.cardDetailLink) { position: absolute; inset: 0; z-index: 3; }
+        .chapterGrid :global(.albumNumber) { position: absolute; z-index: 5; left: 8px; bottom: 8px; padding: 5px 7px; border: 1px solid rgba(255,255,255,.35); border-radius: 8px; background: rgba(26,20,42,.83); box-shadow: 0 4px 11px rgba(0,0,0,.22); color: #fff9df; font-size: 10px; font-weight: 900; letter-spacing: .02em; pointer-events: none; }
 
         .loadMore { display: flex; justify-content: center; margin: 22px 0 8px; }
         .loadMore button { padding: 11px 18px; background: #243b64; color: white; border-color: #243b64; }
