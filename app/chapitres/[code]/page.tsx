@@ -47,6 +47,12 @@ function collectionNumber(value?: string | null) {
   return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
 }
 
+function isPromoCard(card: Card) {
+  const rarity = card.rarity?.trim().toLowerCase();
+  const collectionNumberValue = card.collection_number?.trim().toUpperCase() || "";
+  return rarity === "promo" || /\/P(?:D)?\d+$/.test(collectionNumberValue);
+}
+
 /* ================= PAGE ================= */
 
 export default function ChapitreDetail() {
@@ -223,7 +229,15 @@ export default function ChapitreDetail() {
     setVisibleCount(48);
   }, [chapterCode, q, query, collectionView]);
 
-  const visibleCards = chapterCards.slice(0, visibleCount);
+  const numberedCards = useMemo(
+    () => chapterCards.filter((card) => !isPromoCard(card)),
+    [chapterCards],
+  );
+  const promoCards = useMemo(
+    () => chapterCards.filter(isPromoCard),
+    [chapterCards],
+  );
+  const visibleCards = numberedCards.slice(0, visibleCount);
 
   const incompleteMetadata = useMemo(() => {
     const allCards = cards.filter((card) => Number(card.setCode) === chapterCode);
@@ -262,97 +276,7 @@ export default function ChapitreDetail() {
 
 
 
-  /* ================= RENDER ================= */
-
-  return (
-    <main className="shell">
-      <header className="chapterHero">
-        <div className="brand">
-          <div className="sigil">📘</div>
-          <div>
-            <h1>Chapitre {chapterCode}</h1>
-            <p>
-              {chapterName}
-            </p>
-          </div>
-        </div>
-
-        <div className="controls">
-          <a className="link" href="/chapitres">⬅️ Album</a>
-          <a className="link" href="/">🎴 Cartes</a>
-        </div>
-      </header>
-
-      <section className="chapterProgressPanel">
-        <div className="chapterProgressHeadline">
-          <div>
-            <span>Progression de ta collection</span>
-            <strong>{chapterProgress.owned} <small>/ {chapterProgress.total}</small></strong>
-          </div>
-          <b>{chapterProgress.percent}%</b>
-        </div>
-        <div className="chapterProgressTrack">
-          <div style={{ width: `${chapterProgress.percent}%` }} />
-        </div>
-        <div className="chapterQuickStats">
-          <span>✅ {chapterProgress.owned} possédées</span>
-          <button onClick={() => setCollectionView("missing")}>⬜ {chapterProgress.missing} manquantes</button>
-          <span>🎁 {chapterProgress.doubles} doublons</span>
-        </div>
-      </section>
-
-      {incompleteMetadata && (
-        <aside className="catalogNotice" role="status">
-          <strong>Catalogue en cours d’enrichissement</strong>
-          <span>
-            Les images et noms disponibles sont affichés. Il manque encore les numéros de
-            {" "}{incompleteMetadata.missingNumbers} cartes
-            {incompleteMetadata.missingFrenchNames
-              ? ` et ${incompleteMetadata.missingFrenchNames} traductions françaises`
-              : ""}. Ils seront ajoutés dès que la source du catalogue les fournira.
-          </span>
-        </aside>
-      )}
-
-      <div className="chapterFilters">
-        <input
-          className="pill"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="🔎 Rechercher…"
-        />
-        <div className="viewFilters" aria-label="Filtrer la collection">
-          {([
-            ["all", "Toutes"],
-            ["missing", "Manquantes"],
-            ["owned", "Possédées"],
-            ["doubles", "Doublons"],
-          ] as [CollectionView, string][]).map(([view, label]) => (
-            <button
-              key={view}
-              className={collectionView === view ? "active" : ""}
-              onClick={() => setCollectionView(view)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {query && (
-        <div className="activeFilter">
-          🎯 Résultats filtrés par <b>{query}</b>
-          <button onClick={() => setQ("")}>✕</button>
-        </div>
-      )}
-
-      <div className="gallerySummary">
-        <strong>{chapterCards.length}</strong> carte{chapterCards.length > 1 ? "s" : ""}
-        {visibleCards.length < chapterCards.length && <> · {visibleCards.length} affichées</>}
-      </div>
-
-      <section className="chapterGrid">
-        {visibleCards.map((c) => {
+  function renderCard(c: Card) {
           const qtys = collection[c.id] ?? { normal: 0, foil: 0 };
           const total = qtys.normal + qtys.foil;
 
@@ -488,15 +412,126 @@ export default function ChapitreDetail() {
               </article>
             </div>
           );
-        })}
+  }
+
+  /* ================= RENDER ================= */
+
+  return (
+    <main className="shell">
+      <header className="chapterHero">
+        <div className="brand">
+          <div className="sigil">📘</div>
+          <div>
+            <h1>Chapitre {chapterCode}</h1>
+            <p>
+              {chapterName}
+            </p>
+          </div>
+        </div>
+
+        <div className="controls">
+          <a className="link" href="/chapitres">⬅️ Album</a>
+          <a className="link" href="/">🎴 Cartes</a>
+        </div>
+      </header>
+
+      <section className="chapterProgressPanel">
+        <div className="chapterProgressHeadline">
+          <div>
+            <span>Progression de ta collection</span>
+            <strong>{chapterProgress.owned} <small>/ {chapterProgress.total}</small></strong>
+          </div>
+          <b>{chapterProgress.percent}%</b>
+        </div>
+        <div className="chapterProgressTrack">
+          <div style={{ width: `${chapterProgress.percent}%` }} />
+        </div>
+        <div className="chapterQuickStats">
+          <span>✅ {chapterProgress.owned} possédées</span>
+          <button onClick={() => setCollectionView("missing")}>⬜ {chapterProgress.missing} manquantes</button>
+          <span>🎁 {chapterProgress.doubles} doublons</span>
+        </div>
       </section>
 
-      {visibleCards.length < chapterCards.length && (
+      {incompleteMetadata && (
+        <aside className="catalogNotice" role="status">
+          <strong>Catalogue en cours d’enrichissement</strong>
+          <span>
+            Les images et noms disponibles sont affichés. Il manque encore les numéros de
+            {" "}{incompleteMetadata.missingNumbers} cartes
+            {incompleteMetadata.missingFrenchNames
+              ? ` et ${incompleteMetadata.missingFrenchNames} traductions françaises`
+              : ""}. Ils seront ajoutés dès que la source du catalogue les fournira.
+          </span>
+        </aside>
+      )}
+
+      <div className="chapterFilters">
+        <input
+          className="pill"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="🔎 Rechercher…"
+        />
+        <div className="viewFilters" aria-label="Filtrer la collection">
+          {([
+            ["all", "Toutes"],
+            ["missing", "Manquantes"],
+            ["owned", "Possédées"],
+            ["doubles", "Doublons"],
+          ] as [CollectionView, string][]).map(([view, label]) => (
+            <button
+              key={view}
+              className={collectionView === view ? "active" : ""}
+              onClick={() => setCollectionView(view)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {query && (
+        <div className="activeFilter">
+          🎯 Résultats filtrés par <b>{query}</b>
+          <button onClick={() => setQ("")}>✕</button>
+        </div>
+      )}
+
+      <div className="gallerySummary">
+        <strong>{numberedCards.length}</strong> carte{numberedCards.length > 1 ? "s" : ""} numérotée{numberedCards.length > 1 ? "s" : ""}
+        {promoCards.length > 0 && <>
+          {" · "}<strong>{promoCards.length}</strong> carte{promoCards.length > 1 ? "s" : ""} promo
+        </>}
+        {visibleCards.length < numberedCards.length && <> · {visibleCards.length} affichées</>}
+      </div>
+
+      <section className="chapterGrid">
+        {visibleCards.map(renderCard)}
+      </section>
+
+      {visibleCards.length < numberedCards.length && (
         <div className="loadMore">
           <button onClick={() => setVisibleCount((count) => count + 48)}>
             Afficher 48 cartes de plus
           </button>
         </div>
+      )}
+
+      {promoCards.length > 0 && (
+        <section className="promoSection" aria-labelledby="promo-section-title">
+          <div className="promoSectionHeading">
+            <div>
+              <span>COLLECTION SPÉCIALE</span>
+              <h2 id="promo-section-title">Cartes promotionnelles</h2>
+              <p>Promos, avant-premières et cartes hors numérotation principale.</p>
+            </div>
+            <strong>{promoCards.length}</strong>
+          </div>
+          <div className="chapterGrid promoGrid">
+            {promoCards.map(renderCard)}
+          </div>
+        </section>
       )}
 
       <style jsx>{`
@@ -600,6 +635,14 @@ export default function ChapitreDetail() {
 
         .loadMore { display: flex; justify-content: center; margin: 22px 0 8px; }
         .loadMore button { padding: 11px 18px; background: #243b64; color: white; border-color: #243b64; }
+
+        .promoSection { margin-top: 34px; padding-top: 22px; border-top: 1px solid rgba(74,53,98,.16); }
+        .promoSectionHeading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 19px; border: 1px solid rgba(109,75,145,.18); border-radius: 20px; background: linear-gradient(135deg, rgba(244,237,250,.94), rgba(255,248,224,.94)); box-shadow: 0 10px 26px rgba(54,37,78,.08); }
+        .promoSectionHeading span { display: block; color: #8a6aa5; font-size: 9px; font-weight: 900; letter-spacing: .14em; }
+        .promoSectionHeading h2 { margin: 4px 0 0; color: #3e2d55; font: 700 24px Georgia, serif; }
+        .promoSectionHeading p { margin: 5px 0 0; color: #7e7189; font-size: 11px; }
+        .promoSectionHeading > strong { min-width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(135deg, #6f4a96, #402860); color: white; font-size: 17px; box-shadow: 0 7px 15px rgba(64,40,96,.22); }
+        .promoGrid { margin-top: 13px; padding-top: 0; }
 
         @media (max-width: 1050px) { .chapterGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
         @media (max-width: 780px) {
