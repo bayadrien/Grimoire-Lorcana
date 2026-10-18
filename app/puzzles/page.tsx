@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import AppHeader from "app/components/AppHeader";
 
-type Puzzle = { id: string; ch: number; t: string; img: string; n: number; c: number; portrait?: boolean };
+type PuzzleCrop = { x: number; y: number; width: number; height: number };
+type Puzzle = { id: string; ch: number; t: string; img: string; n: number; c: number; portrait?: boolean; crop?: PuzzleCrop };
 
 const puzzles: Puzzle[] = [
-  { id: "ascension-floodborn", ch: 2, t: "L’Ascension des Floodborn I", img: "/puzzles/ascension-floodborn-2x2.png", n: 4, c: 2 },
-  { id: "ascension-floodborn-2", ch: 2, t: "L’Ascension des Floodborn II", img: "/puzzles/ascension-floodborn-2x2-b.png", n: 4, c: 2 },
-  { id: "retour-ursula", ch: 4, t: "Le Retour d’Ursula", img: "/puzzles/retour-ursula-3x3.png", n: 9, c: 3, portrait: true },
+  { id: "ascension-floodborn", ch: 2, t: "L'Ascension des Floodborn I", img: "/puzzles/ascension-floodborn-2x2.png", n: 4, c: 2 },
+  { id: "ascension-floodborn-2", ch: 2, t: "L'Ascension des Floodborn II", img: "/puzzles/ascension-floodborn-2x2-b.png", n: 4, c: 2 },
+  { id: "retour-ursula", ch: 4, t: "Le Retour d'Ursula", img: "/puzzles/retour-ursula-3x3.png", n: 9, c: 3, portrait: true },
   { id: "mer-azurite", ch: 6, t: "La Mer Azurite", img: "/puzzles/mer-azurite-3x3.png", n: 9, c: 3, portrait: true },
   { id: "archazia-1", ch: 7, t: "Archazia I", img: "/puzzles/archazia-1-3x3.png", n: 9, c: 3, portrait: true },
   { id: "archazia-2", ch: 7, t: "Archazia II", img: "/puzzles/archazia-2-3x3.png", n: 9, c: 3, portrait: true },
@@ -19,9 +20,27 @@ const puzzles: Puzzle[] = [
   { id: "profondeurs-2", ch: 10, t: "Lueurs dans les Profondeurs II", img: "/puzzles/profondeurs-2-3x3.png", n: 9, c: 3, portrait: true },
   { id: "givresort", ch: 11, t: "Givresort I", img: "/puzzles/givresort-3x3.png", n: 9, c: 3 },
   { id: "givresort-2", ch: 11, t: "Givresort II", img: "/puzzles/givresort-2-3x3.png", n: 9, c: 3 },
-  { id: "contrees-inconnues", ch: 12, t: "Contrées inconnues", img: "/puzzles/contrees-inconnues-3x3.png", n: 9, c: 3, portrait: true },
-  { id: "invasion-epineuse", ch: 13, t: "Invasion Épineuse", img: "/puzzles/invasion-epineuse-3x3.png", n: 9, c: 3, portrait: true },
+  { id: "contrees-inconnues", ch: 12, t: "Contr�es inconnues", img: "/puzzles/contrees-inconnues-3x3.png", n: 9, c: 3, portrait: true },
+  { id: "invasion-epineuse", ch: 13, t: "Invasion �pineuse", img: "/puzzles/invasion-epineuse-3x3.png", n: 9, c: 3, portrait: true },
+  { id: "hyperia-city", ch: 14, t: "Hyperia City", img: "/puzzles/hyperia-city-3x3.jpg", n: 9, c: 3, crop: { x: 2.5, y: 25.2, width: 95, height: 55.5 } },
 ];
+
+function pieceBackground(puzzle: Puzzle, piece: number) {
+  const column = (piece - 1) % puzzle.c;
+  const row = Math.floor((piece - 1) / puzzle.c);
+  const rows = Math.ceil(puzzle.n / puzzle.c);
+  const crop = puzzle.crop || { x: 0, y: 0, width: 100, height: 100 };
+  const imageWidth = puzzle.c / (crop.width / 100);
+  const imageHeight = rows / (crop.height / 100);
+  const positionX = ((crop.x / 100) * imageWidth + column) / (imageWidth - 1) * 100;
+  const positionY = ((crop.y / 100) * imageHeight + row) / (imageHeight - 1) * 100;
+
+  return {
+    backgroundImage: `url(${puzzle.img})`,
+    backgroundSize: `${imageWidth * 100}% ${imageHeight * 100}%`,
+    backgroundPosition: `${positionX}% ${positionY}%`,
+  };
+}
 
 export default function PuzzlesPage() {
   const [userId, setUserId] = useState("adrien");
@@ -71,7 +90,7 @@ export default function PuzzlesPage() {
           const chapterFound = chapterPuzzles.reduce((sum, puzzle) => sum + (owned[puzzle.id] || []).length, 0);
           const chapterTotal = chapterPuzzles.reduce((sum, puzzle) => sum + puzzle.n, 0);
           return <button key={chapterNumber} onClick={() => setChapter(chapterNumber)} className={chapter === chapterNumber ? "active" : ""}>
-            <i style={{ backgroundImage: `url(${first.img})` }} /><span><b>Chapitre {chapterNumber}</b><small>{chapterFound}/{chapterTotal} · {chapterPuzzles.length > 1 ? `${chapterPuzzles.length} puzzles` : "1 puzzle"}</small></span>
+            <i style={{ backgroundImage: `url(${first.img})` }} /><span><b>Chapitre {chapterNumber}</b><small>{chapterFound}/{chapterTotal} � {chapterPuzzles.length > 1 ? `${chapterPuzzles.length} puzzles` : "1 puzzle"}</small></span>
           </button>;
         })}
       </section>
@@ -84,15 +103,13 @@ export default function PuzzlesPage() {
             <header><div><p>CHAPITRE {puzzle.ch}</p><h2>{puzzle.t}</h2></div><strong>{percent}%<small>{pieces.length}/{puzzle.n}</small></strong></header>
             <div className={`grid ${puzzle.portrait ? "portrait" : "landscape"}`} style={{ gridTemplateColumns: `repeat(${puzzle.c}, 1fr)` }}>
               {Array.from({ length: puzzle.n }, (_, index) => index + 1).map((piece) => {
-                const column = (piece - 1) % puzzle.c;
-                const row = Math.floor((piece - 1) / puzzle.c);
                 const found = pieces.includes(piece);
                 return <button key={piece} onClick={() => toggle(puzzle, piece)} className={found ? "found" : ""} aria-label={`Morceau ${piece}: ${found ? "obtenu" : "manquant"}`} style={{
-                  backgroundImage: `url(${puzzle.img})`, backgroundSize: `${puzzle.c * 100}% ${puzzle.c * 100}%`, backgroundPosition: `${column * (100 / (puzzle.c - 1))}% ${row * (100 / (puzzle.c - 1))}%`,
-                }}><span>{piece}</span><b>{found ? "✓" : "◇"}</b></button>;
+                  ...pieceBackground(puzzle, piece),
+                }}><span>{piece}</span><b>{found ? "V" : "?"}</b></button>;
               })}
             </div>
-            <footer>{puzzle.n - pieces.length === 0 ? "Puzzle terminé ✨" : `${puzzle.n - pieces.length} morceau${puzzle.n - pieces.length > 1 ? "x" : ""} à retrouver`}</footer>
+            <footer>{puzzle.n - pieces.length === 0 ? "Puzzle termin� ?" : `${puzzle.n - pieces.length} morceau${puzzle.n - pieces.length > 1 ? "x" : ""} � retrouver`}</footer>
           </article>;
         })}
       </section>
@@ -102,3 +119,4 @@ export default function PuzzlesPage() {
     `}</style>
   </main>;
 }
+
