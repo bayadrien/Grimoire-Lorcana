@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { CHAPTERS_NAMES_FR } from "@/lib/chapters-fr";
 import AppHeader from "app/components/AppHeader";
 
@@ -177,6 +178,11 @@ export default function ChapitresPage() {
         </section>
       )}
 
+      <div className="catalogActions">
+        <Link href="/cartes/ajouter">＋ Ajouter une carte hors Lorcast</Link>
+        <span>Promos, exclusivités et cartes absentes du catalogue</span>
+      </div>
+
       {loading && <p className="loading">Chargement de la progression…</p>}
 
       <section className="chaptersGrid">
@@ -258,6 +264,9 @@ export default function ChapitresPage() {
         .globalStats strong { font-size: 22px; color: #243b64; }
         .globalStats span { font-size: 12px; opacity: .65; }
         .loading { text-align: center; opacity: .7; }
+        .catalogActions { display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0 2px;flex-wrap:wrap; }
+        .catalogActions a { padding:9px 13px;border-radius:999px;background:linear-gradient(135deg,#5f4386,#3f2b62);color:#fff;text-decoration:none;font-size:11px;font-weight:900;box-shadow:0 7px 16px rgba(62,41,94,.18); }
+        .catalogActions span { color:#7e7287;font-size:10px; }
 
         .chapterCard {
           position: relative;
