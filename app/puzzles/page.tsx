@@ -22,7 +22,7 @@ const puzzles: Puzzle[] = [
   { id: "givresort-2", ch: 11, t: "Givresort II", img: "/puzzles/givresort-2-3x3.png", n: 9, c: 3 },
   { id: "contrees-inconnues", ch: 12, t: "Contr�es inconnues", img: "/puzzles/contrees-inconnues-3x3.png", n: 9, c: 3, portrait: true },
   { id: "invasion-epineuse", ch: 13, t: "Invasion �pineuse", img: "/puzzles/invasion-epineuse-3x3.png", n: 9, c: 3, portrait: true },
-  { id: "hyperia-city", ch: 14, t: "Hyperia City", img: "/puzzles/hyperia-city-3x3.jpg", n: 9, c: 3, crop: { x: 2.5, y: 25.2, width: 95, height: 55.5 } },
+  { id: "hyperia-city", ch: 14, t: "Hyperia City", img: "/puzzles/hyperia-city-brings-another-puzzle-v0-y53wsh80ehuh1.webp", n: 9, c: 3, crop: { x: 2.5, y: 25.2, width: 95, height: 55.5 } },
 ];
 
 function pieceBackground(puzzle: Puzzle, piece: number) {
