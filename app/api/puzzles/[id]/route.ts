@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const PUZZLES: Record<string, number> = { "ascension-floodborn": 4, "ascension-floodborn-2": 4, "retour-ursula": 9, "givresort": 9, "givresort-2": 9, "mer-azurite": 9, "archazia-1": 9, "archazia-2": 9, "jafar-1": 9, "jafar-2": 9, "fabuleux": 9, "profondeurs-1": 9, "profondeurs-2": 9, "contrees-inconnues": 9, "invasion-epineuse": 9 };
+const PUZZLES: Record<string, number> = { "ascension-floodborn": 4, "ascension-floodborn-2": 4, "retour-ursula": 9, "givresort": 9, "givresort-2": 9, "mer-azurite": 9, "archazia-1": 9, "archazia-2": 9, "jafar-1": 9, "jafar-2": 9, "fabuleux": 9, "profondeurs-1": 9, "profondeurs-2": 9, "contrees-inconnues": 9, "invasion-epineuse": 9, "hyperia-city": 9 };
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,7 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const { userId, piece, owned } = await req.json();
   if (!PUZZLES[id] || !["adrien", "angele"].includes(userId) || !Number.isInteger(piece) || piece < 1 || piece > PUZZLES[id] || typeof owned !== "boolean") {
-    return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+    return NextResponse.json({ error: "Donn�es invalides" }, { status: 400 });
   }
 
   if (owned) {
@@ -31,3 +31,4 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
   return NextResponse.json({ ok: true });
 }
+
